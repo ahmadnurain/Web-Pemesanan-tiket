@@ -1,0 +1,21 @@
+.owl-nav {
+    position: absolute;
+    bottom: -20px; /* Jarak dari bawah carousel */
+    width: 100%;
+    display: flex;
+    justify-content: center; /* Tengah horizontal */
+    gap: 16px; /* Jarak antar tombol */
+}
+
+.owl-nav .owl-prev:hover,
+.owl-nav .owl-next:hover {
+    background-color: #0284c7; /* Warna saat hover */
+}
+
+.owl-nav .owl-prev {
+    transform: rotate(0deg); /* Optional: Ikon panah kiri */
+}
+
+.owl-nav .owl-next {
+    transform: rotate(0deg); /* Optional: Ikon panah kanan */
+}
