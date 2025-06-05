@@ -9,8 +9,10 @@ use Filament\Tables\Table;
 use Filament\Resources\Resource;
 use App\Models\TicketTransaction;
 use Filament\Forms\Components\Grid;
+use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Model;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Filters\SelectFilter;
@@ -26,6 +28,30 @@ class TicketTransactionResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-ticket'; // Ikon sidebar
     protected static ?string $navigationLabel = 'Ticket Transactions'; // Label sidebar
     protected static ?string $navigationGroup = 'Management'; // Group di sidebar
+
+
+
+    public static function canCreate(): bool
+    {
+        return Auth::user() && Auth::user()->role === 'super_admin';
+    }
+    public static function canDelete(Model $record): bool
+    {
+        return Auth::user() && Auth::user()->role === 'super_admin';
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (Auth::user()?->role !== 'super_admin') {
+            $query->whereHas('destination', function ($query) {
+                $query->where('user_id', Auth::id());
+            });
+        }
+
+        return $query;
+    }
 
     // Form untuk Create/Edit
     public static function form(Form $form): Form

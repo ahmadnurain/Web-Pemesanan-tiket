@@ -33,11 +33,10 @@ class Destinations extends Model
     /**
      * Relasi ke admin (User) melalui destinasi
      */
-    public function admins(): HasMany
+    public function admin(): BelongsTo
     {
-        return $this->hasMany(User::class, 'destinations_id'); // Relasi ke tabel users berdasarkan destination_id
+        return $this->belongsTo(User::class, 'user_id');
     }
-
     /**
      * Relasi ke foto (Photos)
      */

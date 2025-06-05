@@ -87,7 +87,7 @@
         </div>
     </section>
 
-    <section class="py-10 bg-white py-[17rem] pb-[10rem] items-center">
+    <section class=" bg-white py-[17rem] pb-[10rem] items-center">
         <div class="max-w-7xl mx-auto px-4">
             <h2 class="text-2xl font-bold text-center mb-6 reveal-5">Tren Tahun Ini</h2>
             <!-- Set up your HTML -->

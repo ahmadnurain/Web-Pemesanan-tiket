@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AdminResource\Widgets;
 
 use Filament\Tables\Table;
 use App\Models\TicketTransaction;
+use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -16,10 +17,23 @@ class DahsboardWidgetTabel extends BaseWidget
 
     protected static ?string $heading = 'Latest Transactions';
 
+
+
     protected function getTableQuery(): Builder
     {
-        return TicketTransaction::query()->latest();
+        if (Auth::user()?->role === 'super_admin') {
+            return TicketTransaction::query()->latest();
+        }
+
+        return TicketTransaction::query()
+            ->whereHas('destination', function ($query) {
+                $query->where('user_id', Auth::id());
+            })
+            ->latest();
     }
+
+
+
 
     public function table(Table $table): Table
     {

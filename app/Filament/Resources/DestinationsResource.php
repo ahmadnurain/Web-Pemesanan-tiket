@@ -3,12 +3,15 @@
 namespace App\Filament\Resources;
 
 use Filament\Forms;
+use Filament\Panel;
 use Filament\Tables;
 use Filament\Forms\Form;
 use Filament\Tables\Table;
 use App\Models\Destinations;
 use Tables\Columns\HtmlColumn;
 use Filament\Resources\Resource;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use App\Filament\Resources\DestinationsResource\Pages;
@@ -20,6 +23,30 @@ class DestinationsResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-map-pin';
 
+
+
+    // Tambahkan method ini di sini:
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (Auth::user()?->role === 'super_admin') {
+            return $query;
+        }
+
+        return $query->where('user_id', Auth::id());
+    }
+
+    public static function canCreate(): bool
+    {
+        return Auth::user() && Auth::user()->role === 'super_admin';
+    }
+    public static function canDelete(Model $record): bool
+    {
+        return Auth::user() && Auth::user()->role === 'super_admin';
+    }
+
+
     public static function form(Form $form): Form
     {
         // Debug data request saat formulir diakses
@@ -28,6 +55,11 @@ class DestinationsResource extends Resource
             ->schema([
                 Forms\Components\Card::make()
                     ->schema([
+                        Forms\Components\Select::make('user_id')
+                            ->label('Pemilik Destinasi')
+                            ->relationship('admin', 'name') // pastikan relasi "user()" di model Destinations
+                            ->visible(fn() => Auth::user()?->role === 'admin') // hanya terlihat oleh Super Admin
+                            ->required(fn() => Auth::user()?->role === 'admin'),
                         // Grid untuk membuat dua kolom sejajar
                         Forms\Components\Grid::make(2) // Membuat grid dengan 2 kolom
                             ->schema([

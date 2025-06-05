@@ -30,10 +30,11 @@ class User extends Authenticatable
 
 
     // Relasi dengan tabel destinations
-    public function destination()
+    public function destinations()
     {
-        return $this->belongsTo(Destinations::class, 'destinations_id');
+        return $this->hasMany(Destinations::class);
     }
+
 
     /**
      * The attributes that should be hidden for serialization.

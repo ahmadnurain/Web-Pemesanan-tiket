@@ -40,7 +40,7 @@ class TicketTransaction extends Model
     // Relasi ke tabel Destinations
     public function destination()
     {
-        return $this->belongsTo(Destinations::class);
+        return $this->belongsTo(Destinations::class, 'destination_id');
     }
     // Fungsi untuk memeriksa apakah tiket sudah digunakan
     public function isUsed()
