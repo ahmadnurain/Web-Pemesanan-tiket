@@ -10,6 +10,8 @@ class ListDestinations extends ListRecords
 {
     protected static string $resource = DestinationsResource::class;
 
+
+
     protected function getHeaderActions(): array
     {
         return [

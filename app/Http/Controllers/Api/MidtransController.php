@@ -6,6 +6,8 @@ use Midtrans\Config;
 use Illuminate\Http\Request;
 use App\Models\TicketTransaction;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\TicketMail;
 use App\Http\Controllers\Controller;
 use Midtrans\Notification;
 
@@ -21,7 +23,25 @@ class MidtransController extends Controller
         Config::$is3ds = true;
 
         // Ambil Notifikasi dari Midtrans
-        $notification = new Notification();
+        try {
+            $notification = new Notification();
+        } catch (\Exception $e) {
+            Log::error('Midtrans Notification Error: ' . $e->getMessage());
+            return response()->json(['status' => 'error', 'message' => 'Invalid payload'], 400);
+        }
+
+        // Verifikasi Signature Key untuk keamanan (Mencegah manipulasi)
+        // Rumus: SHA512(order_id + status_code + gross_amount + ServerKey)
+        $validSignature = hash('sha512', $notification->order_id . $notification->status_code . $notification->gross_amount . Config::$serverKey);
+
+        if ($notification->signature_key !== $validSignature) {
+            Log::warning('Invalid Midtrans Signature Key', [
+                'order_id' => $notification->order_id,
+                'received' => $notification->signature_key,
+                'expected' => $validSignature
+            ]);
+            return response()->json(['status' => 'forbidden', 'message' => 'Invalid Signature'], 403);
+        }
 
         // Log data notifikasi
         Log::info('Midtrans Notification: ', (array)$notification);
@@ -34,33 +54,43 @@ class MidtransController extends Controller
             return response()->json(['status' => 'not found'], 404);
         }
 
-        // Perbarui Status Pembayaran
+        // Perbarui Status Pembayaran (idempoten)
         $transactionStatus = $notification->transaction_status;
         $paymentType = $notification->payment_type;
         $fraudStatus = $notification->fraud_status;
 
-        if ($transactionStatus == 'capture') {
-            if ($paymentType == 'credit_card') {
-                if ($fraudStatus == 'accept') {
-                    $transaction->update(['payment_status' => 'succeeded']);
-                } else {
-                    $transaction->update(['payment_status' => 'failed']);
-                }
+        $previousStatus = $transaction->payment_status;
+        $newStatus = $previousStatus; // default tidak berubah
+
+        if ($transactionStatus === 'capture') {
+            if ($paymentType === 'credit_card') {
+                $newStatus = ($fraudStatus === 'accept') ? 'succeeded' : 'failed';
             }
-        } elseif ($transactionStatus == 'settlement') {
-            $transaction->update(['payment_status' => 'succeeded']);
-        } elseif ($transactionStatus == 'pending') {
-            $transaction->update(['payment_status' => 'pending']);
-        } elseif (
-            $transactionStatus == 'deny' ||
-            $transactionStatus == 'cancel' ||
-            $transactionStatus == 'expire'
-        ) {
-            $transaction->update(['payment_status' => 'failed']);
+        } elseif ($transactionStatus === 'settlement') {
+            $newStatus = 'succeeded';
+        } elseif ($transactionStatus === 'pending') {
+            $newStatus = 'pending';
+        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'expire'], true)) {
+            $newStatus = 'failed';
         }
 
-        // Perbarui tipe pembayaran
-        $transaction->update(['payment_type' => $paymentType]);
+        // Update sekali saja
+        $transaction->update([
+            'payment_status' => $newStatus,
+            'payment_type' => $paymentType,
+        ]);
+
+        // Kirim e-ticket saat transisi ke succeeded (hindari duplikasi)
+        if ($previousStatus !== 'succeeded' && $newStatus === 'succeeded') {
+            try {
+                Mail::to($transaction->email)->queue(new TicketMail($transaction));
+            } catch (\Throwable $e) {
+                Log::error('Failed to queue ticket mail', [
+                    'order_id' => $transaction->order_id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         return response()->json(['status' => 'success']);
     }

@@ -15,7 +15,7 @@ class DahsboardWidgetOverview extends BaseWidget
     {
         $stats = [];
 
-        if (Auth::user()?->role === 'admin') {
+        if (Auth::user()?->role === 'super_admin') {
             $stats[] = Stat::make('Total Users', User::count())
                 ->description('Total registered users')
                 ->color('primary')

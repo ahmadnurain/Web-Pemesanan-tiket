@@ -33,7 +33,7 @@ class TicketTransactionResource extends Resource
 
     public static function canCreate(): bool
     {
-        return Auth::user() && Auth::user()->role === 'super_admin';
+        return false;
     }
     public static function canDelete(Model $record): bool
     {
@@ -154,26 +154,33 @@ class TicketTransactionResource extends Resource
                     ->searchable(), // Menambahkan kemampuan pencarian
 
                 // Kolom ticket_status dengan BadgeColumn
-                BadgeColumn::make('ticket_status')
+                TextColumn::make('ticket_status')
                     ->label('Ticket Status')
-                    ->colors([
-                        'unused' => 'success',
-                        'used' => 'danger',
-                    ])
-                    ->getStateUsing(fn($record) => $record->ticket_status),
+                    ->badge()
+                    ->formatStateUsing(fn(string $state) => ucfirst($state))
+                    ->color(fn(string $state) => match ($state) {
+                        'unused' => 'success',  // hijau
+                        'used'   => 'danger',   // merah
+                        default  => 'gray',
+                    }),
 
                 // Kolom amount
                 TextColumn::make('amount')
                     ->label('Amount')
+                    ->numeric(decimalPlaces: 0, locale: 'id') // 50.000
+                    ->prefix('Rp ')
+                    ->alignRight()
                     ->sortable(),
+
 
                 // Kolom payment_status dengan BadgeColumn
                 BadgeColumn::make('payment_status')
                     ->label('Payment Status')
-                    ->colors([
-                        'pending' => 'warning',
-                        'succeeded' => 'success',
-                    ])
+                    ->color(fn(string $state) => match ($state) {
+                        'pending'   => 'warning', // kuning
+                        'succeeded' => 'success', // hijau
+                        default     => 'gray',
+                    })
                     ->getStateUsing(fn($record) => $record->payment_status),
 
                 // Kolom payment_type
@@ -200,16 +207,7 @@ class TicketTransactionResource extends Resource
 
                 // Aksi untuk menghapus
                 DeleteAction::make(),
-                // Tombol untuk mengubah status tiket menjadi 'used'
-                Tables\Actions\Action::make('Approve')
-                    ->action(function ($record) {
-                        // Ubah status tiket menjadi 'used'
-                        $record->update(['ticket_status' => 'used']);
-                    })
-                    ->requiresConfirmation() // Memastikan pengguna mengonfirmasi aksi ini
-                    ->icon('heroicon-o-check') // Menambahkan ikon centang
-                    ->color('success') // Warna tombol hijau
-                    ->visible(fn($record) => $record->ticket_status === 'unused'), // Hanya muncul jika status tiket 'unused'
+
             ])
             ->defaultSort('created_at', 'desc')
             ->searchable(); // Menambahkan fitur pencarian untuk seluruh tabel

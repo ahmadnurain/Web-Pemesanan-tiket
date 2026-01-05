@@ -1,186 +1,331 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="scroll-smooth">
+@extends('layouts.app')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <link rel="stylesheet" href="/css/owl.carousel.min.css">
-    <link rel="stylesheet" href="/css/owl.theme.default.min.css">
-    <link rel="stylesheet" href="/css/style.css">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
-    <title>Document</title>
-</head>
+@section('title', 'Wisata Majalengka - Jelajahi Keindahan Alam')
+@push('head')
+    <link rel="preload" as="image" href="{{ asset('images/bg2.webp') }}" fetchpriority="high">
+@endpush
 
-<body>
-    @include('includes.navbar')
+@section('full')
     <!-- Hero Section -->
-    <section class="relative w-full h-screen bg-cover bg-center flex-grow"
-        style="background-image: url('{{ asset('images/bg2.jpg') }}');">
-
-        <div class="relative z-10 flex flex-col items-start justify-center h-full text-white px-6 md:px-[10rem]">
-            <h1 class="text-3xl md:text-6xl lg:text-8xl font-bold leading-tight pb-6 text-white drop-shadow-lg reveal">
-                Jelajahi Pesona Majalengka
+    <section class="relative w-full h-screen min-h-[600px] overflow-hidden bg-gray-900">
+        <!-- LCP High Priority Hero Image -->
+        <img src="{{ asset('images/bg2.webp') }}" 
+             alt="Wisata Majalengka Background" 
+             width="1920" height="1080"
+             fetchpriority="high"
+             decoding="async"
+             class="absolute inset-0 w-full h-full object-cover object-center z-0">
+             
+        <div class="absolute inset-0 z-0 bg-gradient-to-b from-black/70 via-black/50 to-transparent"></div>
+        
+        <div class="relative z-10 flex flex-col items-center justify-center h-full text-white px-4 text-center">
+            <span class="inline-block py-1 px-3 rounded-full bg-emerald-500/20 border border-emerald-400/30 backdrop-blur-sm text-emerald-100 text-sm font-medium mb-6 reveal">
+                ✨ Official Tourism Portal of Majalengka
+            </span>
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-6 drop-shadow-2xl reveal-2 tracking-tight">
+                Majalengka<span class="text-emerald-400">.</span>
             </h1>
-            <p class="mt-2 text-sm md:text-lg max-w-full md:max-w-2xl pb-6 reveal-2">
-                Temukan keindahan alam dan budaya Majalengka hanya dengan beberapa klik. Dari perbukitan hijau hingga
-                destinasi wisata bersejarah, semua tersedia di sini. Pesan tiket dengan mudah, nikmati pengalaman wisata
-                tanpa ribet!
+            <p class="text-lg md:text-2xl max-w-3xl mb-10 text-gray-100 font-light reveal-3 leading-relaxed">
+                Temukan surga tersembunyi di Jawa Barat. Dari pegunungan hijau hingga warisan budaya yang memukau.
             </p>
-            <button
-                class="mt-4 md:mt-6 px-4 py-2 md:px-6 md:py-3 bg-green-700 hover:bg-green-800 rounded-lg shadow-lg font-semibold text-white reveal-3">
-                Jelajahi Destinasi
-            </button>
+            
+            <div class="flex flex-col md:flex-row gap-4 reveal-4 w-full max-w-md md:max-w-none justify-center">
+                <a href="#tren"
+                    class="group relative px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-semibold transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] flex items-center justify-center gap-2">
+                    <span>Mulai Petualangan</span>
+                    <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </a>
+                <a href="#kategori"
+                    class="px-8 py-4 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/30 text-white rounded-full font-semibold transition-all duration-300 flex items-center justify-center">
+                    Lihat Kategori
+                </a>
+            </div>
         </div>
-    </section>
 
-    <section>
-        <!-- Card Informasi Kategori -->
-        <div class="md:absolute md:bottom-[-10rem] md:left-1/2 transform md:-translate-x-1/2 w-full max-w-7xl px-4">
-            <div
-                class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 bg-white p-4 shadow-lg rounded-xl md:text-center reveal-4">
-                <!-- Alam -->
-                <div class="p-4 rounded-lg ">
-                    <div class="flex justify-center items-center mb-2 md:mb-4">
-                        <img src="{{ asset('/images/Mountain.png') }}" alt="Alam"
-                            class="w-8 h-8 md:w-12 md:h-12 bg-green-500 rounded-full p-2">
-                    </div>
-                    <h3 class="text-base md:text-lg font-semibold">Alam</h3>
-                    <p class="mt-2 text-gray-600 text-sm md:text-base lg:text-sm">Destinasi dengan keindahan alam
-                        seperti pegunungan, air terjun, dan pantai.</p>
+
+    </section>
+@endsection
+
+@section('content')
+    <!-- Global Background Pattern & Ornaments (Fixed) -->
+    <div class="fixed inset-0 z-[-1] pointer-events-none overflow-hidden">
+        <div class="absolute inset-0 bg-pattern opacity-[0.4]"></div>
+        <!-- Decorative Blobs -->
+        <div class="absolute top-0 left-0 w-[500px] h-[500px] bg-emerald-200/20 rounded-full blur-[100px] -translate-x-1/2 -translate-y-1/2 animate-float"></div>
+        <div class="absolute top-1/2 right-0 w-[600px] h-[600px] bg-teal-200/20 rounded-full blur-[120px] translate-x-1/3 -translate-y-1/2 animate-float-delayed"></div>
+        <div class="absolute bottom-0 left-1/4 w-[400px] h-[400px] bg-blue-200/20 rounded-full blur-[80px] translate-y-1/3 animate-float-reverse"></div>
+    </div>
+
+    <!-- Stats Section -->
+    <section class="py-10 relative z-30 -mt-16 md:-mt-24">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 bg-white rounded-2xl shadow-xl p-8 border border-gray-100 reveal relative overflow-hidden">
+                <!-- Subtle pattern on card -->
+                <div class="absolute top-0 right-0 p-4 opacity-5">
+                    <i class="fas fa-map text-9xl text-emerald-900"></i>
                 </div>
-                <!-- Budaya -->
-                <div class="p-4 rounded-lg ">
-                    <div class="flex justify-center items-center mb-2 md:mb-4">
-                        <img src="{{ asset('/images/Pagoda.png') }}" alt="Budaya"
-                            class="w-8 h-8 md:w-12 md:h-12 bg-green-500 rounded-full p-2">
-                    </div>
-                    <h3 class="text-base md:text-lg font-semibold">Budaya</h3>
-                    <p class="mt-2 text-gray-600 text-sm md:text-base lg:text-sm">Wisata terkait warisan budaya, seperti
-                        museum,
-                        keraton, dan desa adat.</p>
+                
+                <div class="text-center relative z-10">
+                    <div class="text-3xl md:text-4xl font-bold text-emerald-600 mb-1">50+</div>
+                    <div class="text-sm text-gray-500 font-medium uppercase tracking-wider">Destinasi</div>
                 </div>
-                <!-- Religi -->
-                <div class="p-4 rounded-lg ">
-                    <div class="flex justify-center items-center mb-2 md:mb-4">
-                        <img src="{{ asset('/images/Vector (1).png') }}" alt="Religi"
-                            class="w-8 h-8 md:w-12 md:h-12 bg-green-500 rounded-full p-2">
-                    </div>
-                    <h3 class="text-base md:text-lg font-semibold">Religi</h3>
-                    <p class="mt-2 text-gray-600 text-sm md:text-base lg:text-sm">Tempat spiritual seperti masjid, pura,
-                        gereja,
-                        dan lokasi ziarah.</p>
+                <div class="text-center border-l border-gray-100 relative z-10">
+                    <div class="text-3xl md:text-4xl font-bold text-emerald-600 mb-1">10k+</div>
+                    <div class="text-sm text-gray-500 font-medium uppercase tracking-wider">Pengunjung</div>
                 </div>
-                <!-- Hiburan -->
-                <div class="p-4 rounded-lg ">
-                    <div class="flex justify-center items-center mb-2 md:mb-4">
-                        <img src="{{ asset('/images/Lap Pool.png') }}" alt="Hiburan"
-                            class="w-8 h-8 md:w-12 md:h-12 bg-green-500 rounded-full p-2">
-                    </div>
-                    <h3 class="text-base md:text-lg font-semibold">Hiburan</h3>
-                    <p class="mt-2 text-gray-600 text-sm md:text-base lg:text-sm">Aktivitas rekreasi modern seperti
-                        taman bermain,
-                        bioskop, dan waterpark.</p>
+                <div class="text-center border-l border-gray-100 relative z-10">
+                    <div class="text-3xl md:text-4xl font-bold text-emerald-600 mb-1">4.8</div>
+                    <div class="text-sm text-gray-500 font-medium uppercase tracking-wider">Rating</div>
+                </div>
+                <div class="text-center border-l border-gray-100 relative z-10">
+                    <div class="text-3xl md:text-4xl font-bold text-emerald-600 mb-1">24/7</div>
+                    <div class="text-sm text-gray-500 font-medium uppercase tracking-wider">Support</div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class=" bg-white py-[17rem] pb-[10rem] items-center">
-        <div class="max-w-7xl mx-auto px-4">
-            <h2 class="text-2xl font-bold text-center mb-6 reveal-5">Tren Tahun Ini</h2>
-            <!-- Set up your HTML -->
-            <div class="owl-carousel reveal-6">
-                <!-- Card 1 -->
-                @foreach ($destinations as $destination)
-                    <!-- Card -->
-                    <a href="{{ route('order.form', ['id' => $destination->id]) }}" class="block ">
-                        <div
-                            class="bg-white rounded-lg shadow-md border overflow-hidden hover:shadow-lg transition-shadow duration-300">
-                            {{-- Tampilkan semua foto terkait --}}
-                            @foreach ($destination->photos as $photo)
-                                <img src="{{ Storage::url($photo->path) }}" alt="{{ $destination->name }}"
-                                    class="w-full h-48 object-cover">
-                            @endforeach
+    <!-- Kategori Section -->
+    <section id="kategori" class="py-16 relative">
+        <div class="relative z-10">
+            <div class="text-center mb-12 reveal">
+                <span class="text-emerald-600 font-semibold tracking-wider uppercase text-sm">Jelajahi Minatmu</span>
+                <h2 class="text-3xl md:text-4xl font-bold mt-2 text-gray-900">Kategori Wisata</h2>
+                <div class="w-20 h-1.5 bg-emerald-500 mx-auto mt-4 rounded-full"></div>
+            </div>
 
-                            <div class="p-4">
-                                <h3 class="text-lg font-semibold ">{{ $destination->name }}</h3>
-                                <p class="text-sm text-gray-600 ">{{ $destination->location }}</p>
-                                <div class="mt-2 ">
-                                    <span
-                                        class="text-green-500 font-bold ">Rp{{ number_format($destination->ticket_price, 0, ',', '.') }}</span>
-                                    <span class="text-sm text-gray-600 ">/ 1 days</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 reveal-2">
+                <!-- Card 1 -->
+                <div class="group bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:-translate-y-2 cursor-pointer">
+                    <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-600 transition-colors duration-300">
+                        <img src="{{ asset('/images/Mountain.png') }}" width="32" height="32" alt="Alam" class="w-8 h-8 group-hover:brightness-0 group-hover:invert transition-all">
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Wisata Alam</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Nikmati udara segar pegunungan, air terjun yang jernih, dan pemandangan hijau yang menenangkan jiwa.</p>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="group bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:-translate-y-2 cursor-pointer">
+                    <div class="w-16 h-16 bg-orange-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-orange-500 transition-colors duration-300">
+                        <img src="{{ asset('/images/Pagoda.png') }}" width="32" height="32" alt="Budaya" class="w-8 h-8 group-hover:brightness-0 group-hover:invert transition-all">
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Seni & Budaya</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Pelajari sejarah lokal, kunjungi museum, dan saksikan pertunjukan seni tradisional yang memukau.</p>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="group bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:-translate-y-2 cursor-pointer">
+                    <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-500 transition-colors duration-300">
+                        <img src="{{ asset('/images/Vector (1).png') }}" width="32" height="32" alt="Religi" class="w-8 h-8 group-hover:brightness-0 group-hover:invert transition-all">
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Wisata Religi</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Temukan ketenangan batin dengan mengunjungi masjid bersejarah dan tempat ziarah yang sakral.</p>
+                </div>
+
+                <!-- Card 4 -->
+                <div class="group bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 hover:-translate-y-2 cursor-pointer">
+                    <div class="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-purple-500 transition-colors duration-300">
+                        <img src="{{ asset('/images/Lap Pool.png') }}" width="32" height="32" alt="Hiburan" class="w-8 h-8 group-hover:brightness-0 group-hover:invert transition-all">
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Rekreasi Keluarga</h3>
+                    <p class="text-gray-500 text-sm leading-relaxed">Taman bermain modern, waterpark seru, dan spot foto instagramable untuk liburan keluarga.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Featured/Trending Section -->
+    <section id="tren" class="py-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 relative">
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-12 reveal">
+                <div>
+                    <span class="text-emerald-600 font-semibold tracking-wider uppercase text-sm">Destinasi Populer</span>
+                    <h2 class="text-3xl md:text-4xl font-bold mt-2 text-gray-900">Paling Banyak Dikunjungi</h2>
+                </div>
+                <a href="{{ route('destinations.index') }}" class="hidden md:inline-flex items-center gap-2 text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
+                    Lihat Semua Destinasi <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <div class="owl-carousel reveal-2">
+                @foreach ($destinations as $destination)
+                    <a href="{{ route('destinations.show', $destination) }}" class="block group h-full">
+                        <div class="bg-white rounded-2xl shadow-lg overflow-hidden h-full flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                            @php($photo = $destination->photos->first())
+                            <div class="relative h-64 overflow-hidden">
+                                <img loading="lazy" width="400" height="256"
+                                    src="{{ $photo ? Storage::url($photo->path) : asset('images/bg2.webp') }}"
+                                    alt="{{ $destination->name }}" 
+                                    class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-emerald-700 shadow-sm">
+                                    Popular
                                 </div>
-                                <div class="mt-3 flex justify-between items-center ">
-                                    <div class="flex items-center space-x-1 text-yellow-500">
-                                        <span>⭐ 8.2</span>
-                                        <span class="text-gray-600 text-sm">(reviews)</span>
+                            </div>
+                            <div class="p-6 flex-grow flex flex-col">
+                                <div class="flex justify-between items-start mb-2">
+                                    <h3 class="text-xl font-bold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">{{ $destination->name }}</h3>
+                                    <div class="flex items-center gap-1 text-yellow-500 text-sm font-bold">
+                                        <i class="fas fa-star"></i> 4.8
                                     </div>
-                                    <button class="text-red-500">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24"
-                                            fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round">
-                                            <path
-                                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 1 0-7.78 7.78l1.06 1.06L12 20.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z">
-                                            </path>
-                                        </svg>
-                                    </button>
+                                </div>
+                                <p class="text-gray-500 text-sm mb-4 flex items-center gap-2">
+                                    <i class="fas fa-map-marker-alt text-emerald-500"></i> {{ $destination->location }}
+                                </p>
+                                <div class="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
+                                    <div>
+                                        <span class="text-xs text-gray-400 block">Mulai dari</span>
+                                        <span class="text-emerald-600 font-bold text-lg">Rp{{ number_format($destination->ticket_price, 0, ',', '.') }}</span>
+                                    </div>
+                                    <span class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </a>
                 @endforeach
             </div>
+            
+            <div class="mt-8 text-center md:hidden">
+                <a href="{{ route('destinations.index') }}" class="inline-flex items-center gap-2 text-emerald-600 font-semibold hover:text-emerald-700 transition-colors">
+                    Lihat Semua Destinasi <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
         </div>
     </section>
-    <footer class="bg-green-700 text-white py-16 px-24 relative overflow-hidden">
-        <!-- Blur Overlay -->
-        <div class="absolute inset-0 bg-green-700  opacity-50 backdrop-blur-lg z-10"></div>
 
-        <!-- Background Image -->
-        <div class="absolute inset-0 bg-cover bg-center " style="background-image: url('/images/bg2.jpg'); z-0;"></div>
-
-        <div
-            class="container mx-auto px-4 flex flex-col md:flex-row justify-between items-center md:items-start space-y-6 md:space-y-0 relative z-20">
-            <!-- Section 1: Wisata Majalengka -->
-            <div class="text-center md:text-left reveal reveal-1">
-                <h2 class="font-bold text-2xl mb-5">Wisata Majalengka</h2>
-                <p>Temukan dan pesan tiket wisata favorit Anda di Majalengka!</p>
-                <p class="mt-16">&copy; 2024 Wisata Majalengka. Semua hak dilindungi.</p>
-            </div>
-
-            <!-- Section 2: Kontak Kami -->
-            <div class="text-center md:text-left reveal reveal-2">
-                <h2 class="font-bold text-2xl mb-3">Kontak Kami</h2>
-                <p class="mb-7">Email: <a href="mailto:info@wisatamajalengka.com"
-                        class="underline">info@wisatamajalengka.com</a></p>
-                <p class="mb-7">Telepon: <a href="tel:+6281234567890" class="underline">+62 812-3456-7890</a></p>
-                <p class="mb-5">Alamat: Jl. Raya Majalengka No. 123, Majalengka, Jawa Barat</p>
-            </div>
-
-            <!-- Section 3: Ikuti Kami -->
-            <div class="text-center md:text-left reveal reveal-3">
-                <h2 class="font-bold text-2xl">Ikuti Kami</h2>
-                <div class="flex justify-center md:justify-start space-x-4 mt-2 text-lg">
-                    <a href="#" class="hover:text-gray-200"><i class="fab fa-facebook-f"></i></a>
-                    <a href="#" class="hover:text-gray-200"><i class="fab fa-instagram"></i></a>
-                    <a href="#" class="hover:text-gray-200"><i class="fab fa-youtube"></i></a>
-                    <a href="#" class="hover:text-gray-200"><i class="fab fa-linkedin-in"></i></a>
+    <!-- Why Choose Us / Promo Section -->
+    <section class="py-20">
+        <div class="bg-emerald-900 rounded-3xl overflow-hidden relative shadow-2xl reveal">
+            <div class="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+            <div class="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-emerald-500 rounded-full blur-3xl opacity-20"></div>
+            <div class="absolute bottom-0 left-0 -mb-20 -ml-20 w-80 h-80 bg-teal-500 rounded-full blur-3xl opacity-20"></div>
+            
+            <div class="relative z-10 grid md:grid-cols-2 gap-10 items-center p-8 md:p-16">
+                <div class="text-white">
+                    <h2 class="text-3xl md:text-4xl font-bold mb-6">Kenapa Memilih Wisata Majalengka?</h2>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-emerald-800 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-check text-emerald-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg">Informasi Terlengkap</h4>
+                                <p class="text-emerald-200 text-sm">Detail destinasi, harga tiket, dan fasilitas terupdate.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-emerald-800 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-ticket-alt text-emerald-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg">Pemesanan Mudah</h4>
+                                <p class="text-emerald-200 text-sm">Booking tiket online tanpa antri, cepat dan aman.</p>
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-full bg-emerald-800 flex items-center justify-center flex-shrink-0">
+                                <i class="fas fa-headset text-emerald-400"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg">Layanan Pelanggan</h4>
+                                <p class="text-emerald-200 text-sm">Tim support siap membantu perjalanan wisata Anda.</p>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="relative">
+                    <img src="{{ asset('images/bg2.webp') }}" alt="Experience" class="rounded-2xl shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500 border-4 border-white/10">
                 </div>
             </div>
         </div>
-    </footer>
+    </section>
 
+    <!-- CTA Section -->
+    <section class="py-16 text-center reveal relative">
+        <div class="relative z-10">
+            <h2 class="text-3xl md:text-5xl font-bold text-gray-900 mb-6">Siap untuk Berpetualang?</h2>
+            <p class="text-gray-600 text-lg max-w-2xl mx-auto mb-10">Jangan lewatkan kesempatan untuk menikmati keindahan alam Majalengka. Pesan tiket Anda sekarang dan buat kenangan tak terlupakan.</p>
+            <a href="{{ route('destinations.index') }}" class="inline-block px-10 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full font-bold text-lg shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                Cari Destinasi Sekarang
+            </a>
+        </div>
+    </section>
+@endsection
 
-
-
-
-
-
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <script src="/js/owl.carousel.min.js"></script>
-    <script src="/js/script.js"></script>
-    <script src="https://unpkg.com/scrollreveal"></script>
-</body>
+@section('scripts')
+    <style>
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+             // Wait for deferred scripts to execute
+             // We can check window.jQuery or just run it, usually deferred scripts run before DOMContentLoaded fires completely or right at it.
+             // Actually, 'defer' scripts run before 'DOMContentLoaded'.
+             
+            if (typeof $ !== 'undefined') {
+                $(document).ready(function(){
+                    var $c = $('.owl-carousel');
+                    if ($c.length && typeof $.fn.owlCarousel !== 'undefined') {
+                        $c.owlCarousel({
+                            loop: false,
+                            rewind: true,
+                            margin: 24,
+                            nav: true,
+                            dots: false,
+                            navText: [
+                                '<i class="fas fa-arrow-left"></i>',
+                                '<i class="fas fa-arrow-right"></i>'
+                            ],
+                            responsive: {
+                                0: {
+                                    items: 1,
+                                    stagePadding: 20
+                                },
+                                640: {
+                                    items: 2
+                                },
+                                1024: {
+                                    items: 3
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+            
+            if (typeof ScrollReveal !== 'undefined') {
+                ScrollReveal().reveal('.reveal', { 
+                    distance: '40px',
+                    origin: 'bottom',
+                    duration: 1000,
+                    interval: 150,
+                    easing: 'cubic-bezier(0.5, 0, 0, 1)',
+                    cleanup: true 
+                });
+                ScrollReveal().reveal('.reveal-2', { 
+                    distance: '40px',
+                    origin: 'bottom',
+                    duration: 1000,
+                    delay: 200,
+                    interval: 150,
+                    easing: 'cubic-bezier(0.5, 0, 0, 1)'
+                });
+                ScrollReveal().reveal('.reveal-3', { 
+                    distance: '40px',
+                    origin: 'bottom',
+                    duration: 1000,
+                    delay: 400,
+                    easing: 'cubic-bezier(0.5, 0, 0, 1)'
+                });
+                ScrollReveal().reveal('.reveal-4', { 
+                    distance: '40px',
+                    origin: 'bottom',
+                    duration: 1000,
+                    delay: 600,
+                    easing: 'cubic-bezier(0.5, 0, 0, 1)'
+                });
+            }
+        });
+    </script>
+@endsection

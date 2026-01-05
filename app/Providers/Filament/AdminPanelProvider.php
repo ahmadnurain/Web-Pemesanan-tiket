@@ -2,23 +2,25 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Resources\AdminResource\Widgets\DahsboardWidgetOverview;
-use App\Filament\Resources\AdminResource\Widgets\DahsboardWidgetTabel;
-use Filament\Http\Middleware\Authenticate;
-use Filament\Http\Middleware\AuthenticateSession;
-use Filament\Http\Middleware\DisableBladeIconComponents;
-use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
 use Filament\Panel;
-use Filament\PanelProvider;
-use Filament\Support\Colors\Color;
 use Filament\Widgets;
-use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
-use Illuminate\Routing\Middleware\SubstituteBindings;
+use Filament\PanelProvider;
+use App\Filament\Pages\Auth\Login as CustomLogin;
+use Filament\Support\Colors\Color;
+use App\Filament\Pages\PadDashboard;
+use Filament\Http\Middleware\Authenticate;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Filament\Http\Middleware\AuthenticateSession;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Filament\Http\Middleware\DisableBladeIconComponents;
+use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use App\Filament\Resources\AdminResource\Widgets\DahsboardWidgetTabel;
+use App\Filament\Resources\AdminResource\Widgets\DahsboardWidgetOverview;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -28,12 +30,12 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            ->login(CustomLogin::class)
             ->colors([
                 'danger' => Color::Red,
                 'gray' => Color::Zinc,
                 'info' => Color::Blue,
-                'primary' => Color::Blue,
+                'primary' => Color::Green,
                 'success' => Color::Green,
                 'warning' => Color::Amber,
             ])
@@ -41,6 +43,8 @@ class AdminPanelProvider extends PanelProvider
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
+                \App\Filament\Pages\ScanTickets::class,
+                PadDashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
@@ -48,6 +52,10 @@ class AdminPanelProvider extends PanelProvider
                 // Widgets\FilamentInfoWidget::class,
                 DahsboardWidgetOverview::class,
                 DahsboardWidgetTabel::class,
+
+
+
+
             ])
             ->middleware([
                 EncryptCookies::class,

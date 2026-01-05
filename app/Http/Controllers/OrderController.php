@@ -4,105 +4,182 @@ namespace App\Http\Controllers;
 
 use Midtrans\Snap;
 use Midtrans\Config;
+use App\Mail\TicketMail;
+use Illuminate\Support\Str;
+use App\Jobs\SendEticketJob;
 use App\Models\Destinations;
 use Illuminate\Http\Request;
 use App\Models\TicketTransaction;
+use Illuminate\Support\Facades\DB;
+use Midtrans\Snap as MidtransSnap;
+
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Barryvdh\DomPDF\Facade\Pdf as PDF;
+use Midtrans\Config as MidtransConfig;
+
 
 class OrderController extends Controller
 {
     // Menampilkan form pemesanan// Menampilkan form pemesanan
-    public function showForm($id)
+    public function showForm(Destinations $destination)
     {
-        $destination = Destinations::with('photos')->findOrFail($id);
+        $destination->load('photos');
         return view('order-form', compact('destination'));
     }
 
     public function processOrder(Request $request)
     {
-        // Format amount yang diterima
-        $request->merge([
-            'amount' => (float) str_replace(['IDR', ',', ' '], '', $request->amount)
+        // 1) Validasi input dari user (tanpa menerima amount dari client)
+        $validated = $request->validate([
+            'destination_id' => ['required', 'exists:destinations,id'],
+            'name'           => ['required', 'string', 'max:255'],
+            'email'          => ['required', 'email'],
+            'phone_number'   => ['required', 'string', 'max:30'],
+            'total_tickets'  => ['required', 'integer', 'min:1'],
+            'visit_date'     => ['nullable', 'date', 'after_or_equal:today'], // opsional
+            'ticket_type'    => ['nullable', 'in:dewasa,anak'],               // opsional
         ]);
 
-        // Validasi Data
-        $request->validate([
-            'destination_id' => 'required',
-            'name' => 'required',
-            'email' => 'required|email',
-            'phone_number' => 'required',
-            'total_tickets' => 'required|numeric',
-            'amount' => 'required|numeric',
-        ]);
+        // 2) Ambil destinasi & pastikan harga valid (integer)
+        $destination = Destinations::findOrFail($validated['destination_id']);
+        $price = (int) $destination->ticket_price;
+        if ($price <= 0) {
+            return back()->withErrors(['amount' => 'Harga tiket tidak valid.'])->withInput();
+        }
 
-        // Membuat transaksi dan menyimpan ke database
-        $order_id = 'TKT' . strtoupper(uniqid('order_', true)) . '-' . time(); // Unik order_id
+        $qty = (int) $validated['total_tickets'];
 
-        $transaction = TicketTransaction::create([
-            'destination_id' => $request->destination_id,
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone_number' => $request->phone_number,
-            'total_tickets' => $request->total_tickets,
-            'ticket_code' => 'TKT' . strtoupper(uniqid()),
-            'amount' => $request->amount,
-            'payment_status' => 'pending',
-            'payment_type' => null, // Biarkan null, akan di-update nanti
-            'ticket_status' => 'unused',
-            'order_id' => $order_id, // Simpan order_id ke database
-        ]);
+        // 3) Jika ke depan ada beda harga per tipe, terapkan faktor di sini
+        // $factor = ($validated['ticket_type'] ?? 'dewasa') === 'anak' ? 0.8 : 1;
+        // $amount = (int) round($price * $qty * $factor);
+        $amount = (int) ($price * $qty);
 
-        // Ambil data destination berdasarkan ID
-        $destination = Destinations::findOrFail($request->destination_id);
+        // 4) Buat order_id yang rapi (alnum + dash), unik, <= 50 char
+        $orderId = 'TKT-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(8));
 
-        // Set konfigurasi Midtrans
-        \Midtrans\Config::$serverKey = env('MIDTRANS_SERVER_KEY');
-        \Midtrans\Config::$isProduction = false; // Ubah ke true di mode produksi
-        \Midtrans\Config::$isSanitized = true;
-        \Midtrans\Config::$is3ds = true;
+        // 5) Konfigurasi Midtrans
+        MidtransConfig::$serverKey     = config('midtrans.server_key', env('MIDTRANS_SERVER_KEY'));
+        MidtransConfig::$isProduction  = (bool) config('midtrans.is_production', false);
+        MidtransConfig::$isSanitized   = true;
+        MidtransConfig::$is3ds         = true;
 
-        // Dapatkan Snap Token untuk transaksi
-        $snapToken = Snap::getSnapToken([
+        // 6) Parameter transaksi untuk Snap
+        $params = [
             'transaction_details' => [
-                'order_id' => $order_id, // Gunakan order_id yang konsisten
-                'gross_amount' => $transaction->amount,
+                'order_id'      => $orderId,
+                'gross_amount'  => $amount,      // integer (wajib)
             ],
             'customer_details' => [
-                'first_name' => $transaction->name,
-                'email' => $transaction->email,
-                'phone' => $transaction->phone_number,
+                'first_name' => $validated['name'],
+                'email'      => $validated['email'],
+                'phone'      => $validated['phone_number'],
             ],
-        ]);
+            // item_details opsional tapi berguna (maks 50 chars utk name)
+            'item_details' => [[
+                'id'       => (string) $destination->id,
+                'price'    => $price,
+                'quantity' => $qty,
+                'name'     => mb_strimwidth($destination->name, 0, 50),
+            ]],
+        ];
 
-        // Update snap_token pada transaksi
-        $transaction->update(['snap_token' => $snapToken]);
+        // 7) Minta Snap Token, tangani error agar user dapat pesan jelas
+        // 7) Minta Snap Token, tangani error agar user dapat pesan jelas
+        try {
+            $snapToken = MidtransSnap::getSnapToken($params);
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withErrors(['payment' => 'Gagal menginisiasi pembayaran. Silakan coba lagi.'])->withInput();
+        }
 
-        // Ambil data customer untuk ditampilkan pada view
-        $customer = $transaction;
+        // 8) Simpan transaksi + snap_token secara atomik
+        $transaction = DB::transaction(function () use ($validated, $orderId, $amount, $snapToken) {
+            return TicketTransaction::create([
+                'destination_id' => $validated['destination_id'],
+                'name'           => $validated['name'],
+                'email'          => $validated['email'],
+                'phone_number'   => $validated['phone_number'],
+                'total_tickets'  => $validated['total_tickets'],
+                'ticket_code'    => 'TKT-' . Str::upper(Str::random(10)),
+                'amount'         => $amount,             // dihitung server-side
+                'payment_status' => 'pending',
+                'payment_type'   => null,
+                'ticket_status'  => 'unused',
+                'order_id'       => $orderId,
+                'snap_token'     => $snapToken,
+                // kolom baru (opsional) – pastikan sudah ada di migration & $fillable
+                'ticket_type'    => $validated['ticket_type'] ?? 'regular',
+                'visit_date'     => $validated['visit_date'] ?? null,
+            ]);
+        });
 
-        // Redirect ke halaman pembayaran Midtrans
+        // 9) Kirim ke view pembayaran
         return view('payment', [
-            'snapToken' => $snapToken,
+            'snapToken'   => $snapToken,
             'destination' => $destination,
-            'customer' => $customer // Pass customer data to view
+            'customer'    => $transaction, // view kamu sudah pakai $customer
         ]);
     }
-    public function success(Request $request)
+    public function finalize(Request $request)
     {
-        // Ambil snap_token dari query string
-        $snap_token = $request->query('snap_token');
+        $snap_token = $request->input('snap_token');
 
-        // Cari transaksi berdasarkan snap_token
+        if (!$snap_token) {
+            return redirect()->route('home');
+        }
+
         $transaction = TicketTransaction::where('snap_token', $snap_token)->firstOrFail();
 
-        // Ambil data destinasi berdasarkan ID transaksi
+        // Simpan ID ke session
+        session()->put('success_transaction_id', $transaction->id);
+
+        // Kirim email e-ticket di sini agar hanya tereksekusi sekali saat redirect
+        // (Idealnya via Webhook, tapi untuk flow ini kita taruh di sini)
+        SendEticketJob::dispatch($transaction->id);
+
+        return redirect()->route('payment.success');
+    }
+
+    public function success(Request $request)
+    {
+        // Ambil ID dari session
+        $transactionId = session('success_transaction_id');
+
+        if (!$transactionId) {
+            // Fallback: jika user akses langsung tanpa session, redirect home
+            return redirect()->route('home');
+        }
+
+        $transaction = TicketTransaction::findOrFail($transactionId);
+
+        // Ambil data destinasi
         $destination = Destinations::findOrFail($transaction->destination_id);
         $customer = $transaction;
-        // Redirect ke view success
+
         return view('success', [
             'transaction' => $transaction,
             'destination' => $destination,
-            'customer' => $customer // Pass customer data to view
+            'customer'    => $customer
         ]);
+    }
+
+    public function downloadTicket(TicketTransaction $transaction)
+    {
+        $pdf = PDF::loadView('tickets.pdf', ['transaction' => $transaction]);
+        return $pdf->download('e-ticket-' . $transaction->ticket_code . '.pdf');
+    }
+    public function resendEticket(Request $request, TicketTransaction $transaction)
+    {
+        try {
+            SendEticketJob::dispatch($transaction->id);
+            return response()->json(['ok' => true]);
+        } catch (\Throwable $e) {
+            Log::error('Resend e-ticket failed', [
+                'error' => $e->getMessage(),
+                'tx_id' => $transaction->id,
+            ]);
+            return response()->json(['ok' => false, 'message' => 'Gagal mengirim ulang e-ticket'], 500);
+        }
     }
 }

@@ -10,11 +10,11 @@ class Video extends Model
     //    
     use HasFactory;
 
-    protected $fillable = ['destination_id', 'path'];
+    protected $fillable = ['destinations_id', 'path'];
 
     // Relasi ke Destinations
     public function destination()
     {
-        return $this->belongsTo(Destinations::class);
+        return $this->belongsTo(Destinations::class, 'destinations_id', 'id');
     }
 }

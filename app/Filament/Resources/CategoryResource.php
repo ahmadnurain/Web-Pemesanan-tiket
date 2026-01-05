@@ -83,7 +83,10 @@ class CategoryResource extends Resource
                         Forms\Components\TextInput::make('name') // Field Nama
                             ->label('Nama')
                             ->required()
-                            ->maxLength(255)
+                            ->maxLength(50)
+                            ->regex('/^[a-zA-Z\s]*$/')
+                            ->validationAttribute('Nama Kategori')
+                            ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\s]/g, '')"])
 
                     ]),
             ]);

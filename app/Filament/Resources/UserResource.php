@@ -77,17 +77,27 @@ class UserResource extends Resource
         return $form
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->maxLength(50)
+                    ->regex('/^[a-zA-Z\s]*$/')
+                    ->validationAttribute('Nama Kategori')
+                    ->extraInputAttributes(['oninput' => "this.value = this.value.replace(/[^a-zA-Z\s]/g, '')"])
                     ->required(),
 
                 Forms\Components\TextInput::make('email')
                     ->email()
+                    ->maxLength(50)
+                    ->extraInputAttributes(['oninput' => "if(this.value.length > 50) this.value = this.value.slice(0, 50);"])
                     ->required(),
 
                 Forms\Components\TextInput::make('password')
                     ->password()
-                    ->required()
+                    ->revealable()
+                    ->helperText('Biarkan kosong jika tidak ingin mengubah password.')
+                    ->maxLength(50)
+                    ->extraInputAttributes(['oninput' => "if(this.value.length > 50) this.value = this.value.slice(0, 50);"])
                     ->dehydrateStateUsing(fn($state) => bcrypt($state)) // Encrypt password
-                    ->hiddenOn('edit'),
+                    ->dehydrated(fn($state) => filled($state))
+                    ->required(fn(string $operation): bool => $operation === 'create'),
 
                 Forms\Components\Select::make('role')
                     ->options([
