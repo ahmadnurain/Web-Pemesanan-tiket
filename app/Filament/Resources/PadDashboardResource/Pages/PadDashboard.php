@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Pages;
+namespace App\Filament\Resources\PadDashboardResource\Pages;
 
 use Filament\Forms;
 use Filament\Forms\Form; // Pastikan 'Form' di-import
