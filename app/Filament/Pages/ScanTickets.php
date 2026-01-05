@@ -72,7 +72,7 @@ class ScanTickets extends Page
             return;
         }
 
-        $isOwner = optional($tx->destination)->user_id === $user?->id;
+        $isOwner = (int) optional($tx->destination)->user_id === (int) $user?->id;
         if (!$isOwner) {
             $this->error = 'Anda tidak berwenang memvalidasi tiket destinasi lain.';
             Notification::make()->title('Bukan destinasi Anda')->danger()->send();

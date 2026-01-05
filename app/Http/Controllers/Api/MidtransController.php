@@ -83,9 +83,19 @@ class MidtransController extends Controller
         // Kirim e-ticket saat transisi ke succeeded (hindari duplikasi)
         if ($previousStatus !== 'succeeded' && $newStatus === 'succeeded') {
             try {
-                Mail::to($transaction->email)->queue(new TicketMail($transaction));
+                // 1. Generate PDF
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('tickets.pdf', [
+                    'transaction' => $transaction,
+                    'destination' => $transaction->destination
+                ]);
+                $pdfContent = $pdf->output();
+
+                // 2. Kirim Email (Sync / Langsung) agar tidak perlu Worker
+                Mail::to($transaction->email)->send(
+                    new TicketMail($transaction, $transaction->destination, $pdfContent)
+                );
             } catch (\Throwable $e) {
-                Log::error('Failed to queue ticket mail', [
+                Log::error('Failed to send ticket mail', [
                     'order_id' => $transaction->order_id,
                     'error' => $e->getMessage(),
                 ]);

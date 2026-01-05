@@ -47,7 +47,7 @@
                                 style="margin:16px 0;">
                                 <tr>
                                     <td align="center">
-                                        <a href="{{ route('ticket.download', $transaction->id) }}"
+                                        <a href="{{ $downloadUrl }}"
                                             style="background:#059669;color:#ffffff;padding:12px 20px;border-radius:8px;display:inline-block;text-decoration:none;font-weight:600;">
                                             Unduh E-Ticket (PDF)
                                         </a>
@@ -57,9 +57,9 @@
 
                             <p style="font-size:12px;color:#6b7280;text-align:center;margin:8px 0 0;">
                                 Jika tombol tidak berfungsi, salin tautan berikut:<br>
-                                <a href="{{ route('ticket.download', $transaction->id) }}"
+                                <a href="{{ $downloadUrl }}"
                                     style="color:#059669;text-decoration:underline;">
-                                    {{ route('ticket.download', $transaction->id) }}
+                                    {{ $downloadUrl }}
                                 </a>
                             </p>
 

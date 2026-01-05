@@ -34,7 +34,7 @@ class TicketScanController extends Controller
 
             // super_admin bebas, admin hanya destinasi miliknya
             $isSuper = $user->role === 'super_admin';
-            $isOwner = optional($tx->destination)->user_id === $user->id;
+            $isOwner = (int) optional($tx->destination)->user_id === (int) $user->id;
             if (!($isSuper || $isOwner)) {
                 $this->log($tx->id, $user->id, 'unauthorized', $ip, $ua);
                 return response()->json(['status' => 'invalid', 'reason' => 'unauthorized'], 403);

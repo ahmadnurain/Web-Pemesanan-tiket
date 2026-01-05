@@ -91,7 +91,7 @@ class OrderLookupController extends Controller
                 ['transaction' => $tx->uuid]
             );
 
-            \Illuminate\Support\Facades\Mail::to($tx->email)->queue(
+            \Illuminate\Support\Facades\Mail::to($tx->email)->send(
                 new \App\Mail\TicketLinkMail($tx, $tx->destination, $link)
             );
         }
@@ -110,7 +110,7 @@ class OrderLookupController extends Controller
             ['transaction' => $transaction->uuid]
         );
 
-        Mail::to($transaction->email)->queue(
+        Mail::to($transaction->email)->send(
             new TicketLinkMail($transaction, $transaction->destination, $url)
         );
 
