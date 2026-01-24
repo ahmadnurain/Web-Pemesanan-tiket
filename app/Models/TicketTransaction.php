@@ -18,10 +18,9 @@ class TicketTransaction extends Model
 
     // Field yang bisa diisi secara mass-assignment
     protected $fillable = [
-
         'destination_id',
         'name',
-        'uuid',
+        // 'uuid', // Dihapus untuk penyederhanaan
         'email',
         'phone_number',
         'ticket_code',
@@ -31,15 +30,21 @@ class TicketTransaction extends Model
         'payment_type',
         'total_tickets',
         'snap_token',
-        'order_id',  // Tambahkan 'order_id' di sini
+        'order_id',
         'ticket_type',
         'visit_date',
         'qr_secret',
-        'scan_count',
-        'last_scanned_at',
+        // 'scan_count', // Removed
+        // 'last_scanned_at', // Removed
         'used_at',
         'scanned_by',
     ];
+
+    // Gunakan 'ticket_code' sebagai pengganti ID/UUID di URL
+    public function getRouteKeyName()
+    {
+        return 'ticket_code';
+    }
 
     // Relasi ke tabel User
     public function user()
@@ -67,10 +72,8 @@ class TicketTransaction extends Model
     protected static function booted(): void
     {
         static::creating(function ($model) {
-            if (empty($model->uuid)) {
-                $model->uuid = (string) Str::uuid();
-                if (empty($model->qr_secret)) $model->qr_secret = Str::random(48);
-            }
+            // UUID dihapus. QR Secret tetap ada untuk keamanan tanda tangan.
+            if (empty($model->qr_secret)) $model->qr_secret = Str::random(48);
         });
     }
 
@@ -79,11 +82,17 @@ class TicketTransaction extends Model
         return $this->hasMany(TicketScan::class, 'ticket_transaction_id');
     }
 
+    public function items(): HasMany
+    {
+        return $this->hasMany(TransactionItem::class, 'ticket_transaction_id');
+    }
+
     public function qrPayload(): string
     {
-        $msg = $this->uuid;
+        // Ganti payload QR dari UUID ke Ticket Code
+        $msg = $this->ticket_code;
         $sig = hash_hmac('sha256', $msg, $this->qr_secret ?? '');
-        return $msg . '|' . $sig; // inilah yang di-encode ke QR
+        return $msg . '|' . $sig;
     }
 
     public function markUsedBy(int $userId): void
@@ -93,8 +102,7 @@ class TicketTransaction extends Model
             $this->ticket_status = 'used';
         }
         $this->scanned_by = $userId;
-        $this->scan_count++;
-        $this->last_scanned_at = now();
+        // logic scan_count & last_scanned_at dihapus
         $this->save();
     }
 }

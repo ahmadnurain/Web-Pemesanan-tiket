@@ -17,7 +17,7 @@ class MidtransController extends Controller
     public function handleNotification(Request $request)
     {
         // Setup Midtrans Configuration
-        Config::$serverKey = env('MIDTRANS_SERVER_KEY');
+        Config::$serverKey = config('midtrans.server_key');
         Config::$isProduction = false; // Ubah ke true di mode produksi
         Config::$isSanitized = true;
         Config::$is3ds = true;

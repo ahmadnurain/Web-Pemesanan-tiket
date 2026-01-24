@@ -26,9 +26,8 @@ class TicketMail extends Mailable
 
     public function build()
     {
-        $downloadUrl = URL::temporarySignedRoute(
+        $downloadUrl = URL::signedRoute(
             'ticket.download',
-            now()->addDays(3),
             ['transaction' => $this->transaction->uuid]
         );
         return $this->subject('E-Ticket ' . $this->transaction->ticket_code)

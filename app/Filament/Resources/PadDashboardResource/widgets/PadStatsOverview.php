@@ -52,22 +52,51 @@ class PadStatsOverview extends BaseWidget
         $usedTickets   = (clone $base)->whereNotNull('used_at')->sum('total_tickets');
         $scanRate = $issuedTickets > 0 ? ($usedTickets / $issuedTickets) : 0;
 
-        return [
+        // Breakdown per Ticket Type (from transaction_items relation)
+        // Hitung total item terjual per nama tipe
+        $ticketTypes = \App\Models\TransactionItem::query()
+            ->whereHas('transaction', function ($q) use ($from, $to, $allowed, $destIds) {
+                $q->whereBetween('created_at', [$from, $to])
+                    ->where('payment_status', 'succeeded')
+                    ->when($allowed !== null, fn($qq) => $qq->whereIn('destination_id', $allowed))
+                    ->when(!empty($destIds), fn($qq) => $qq->whereIn('destination_id', $destIds));
+            })
+            ->selectRaw('name, sum(quantity) as total_qty')
+            ->groupBy('name')
+            ->pluck('total_qty', 'name');
+
+        // Asumsi nama tiket mengandung kata "Anak" atau "Dewasa"
+        // Atau kita list semua yang muncul.
+        // Untuk ringkas di Overview, kita ambil Top 2 (biasanya Dewasa & Anak)
+
+        $stats = [
             Stat::make('PAD (Gross)', 'Rp ' . number_format($padGross, 0, ',', '.'))
                 ->description('Total transaksi sukses')
-                ->icon('heroicon-o-banknotes'),
+                ->icon('heroicon-o-banknotes')
+                ->color('success'),
 
             Stat::make('Transaksi Sukses', number_format($trxSucc))
-                ->description('Order berstatus succeeded')
-                ->icon('heroicon-o-check-circle'),
+                ->description('Total Order')
+                ->icon('heroicon-o-shopping-bag'),
 
-            Stat::make('Pengunjung (Dipakai)', number_format($usedTickets))
-                ->description('Tiket digunakan (used_at)')
-                ->icon('heroicon-o-user-group'),
-
-            Stat::make('Scan Rate', number_format($scanRate * 100, 2) . ' %')
-                ->description('Used / Issued dari tiket sukses')
-                ->icon('heroicon-o-chart-pie'),
+            Stat::make('Tiket Terjual (Total)', number_format($issuedTickets))
+                ->description('Total lembar tiket')
+                ->icon('heroicon-o-ticket'),
         ];
+
+        // Tambahkan breakdown stat dinamis
+        foreach ($ticketTypes as $typeName => $qty) {
+            $stats[] = Stat::make('Tiket: ' . $typeName, number_format($qty))
+                ->icon('heroicon-o-user')
+                ->color('info');
+        }
+
+        // Tambahkan stat pengunjung scan
+        $stats[] = Stat::make('Pengunjung Masuk', number_format($usedTickets))
+            ->description('Tiket discan (used)')
+            ->icon('heroicon-o-check-circle')
+            ->color('warning');
+
+        return $stats;
     }
 }

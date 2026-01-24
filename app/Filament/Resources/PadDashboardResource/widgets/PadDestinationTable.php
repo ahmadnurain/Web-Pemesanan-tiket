@@ -61,28 +61,51 @@ class PadDestinationTable extends BaseWidget
             }], 'amount')
             ->orderByDesc('pad_gross');
 
+        // Ambil daftar tipe tiket unik yang ada transaksi di range ini (untuk header atau info)
+        // (Optional, kalau mau kolom dinamis banget. Disini kita gabung jadi satu kolom "Rincian")
+
         return $table
             ->query($query)
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Destinasi')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('trx_success')->label('Transaksi')->numeric()->default(0)->sortable(),
-                Tables\Columns\TextColumn::make('tickets_issued')->label('Tiket Terbit')->numeric()->default(0)->sortable(),
-                Tables\Columns\TextColumn::make('tickets_used')->label('Tiket Dipakai')->numeric()->default(0)->sortable(),
+                Tables\Columns\TextColumn::make('name')->label('Destinasi')
+                    ->description(fn(Destinations $r) => $r->location ?? '')
+                    ->searchable(),
 
-                Tables\Columns\TextColumn::make('scan_rate')
-                    ->label('Scan Rate')
-                    ->state(function ($record) {
-                        $issued = (int) ($record->tickets_issued ?? 0);
-                        $used   = (int) ($record->tickets_used ?? 0);
-                        return $issued > 0 ? round(($used / $issued) * 100, 2) : 0;
+                Tables\Columns\TextColumn::make('trx_success')->label('Order')->numeric()->sortable(),
+
+                Tables\Columns\TextColumn::make('tickets_issued')->label('Total Tiket')->numeric()->sortable()
+                    ->color('primary')
+                    ->weight('bold'),
+
+                // Kolom Breakdown Dinamis (Tipe Tiket)
+                Tables\Columns\TextColumn::make('breakdown')
+                    ->label('Rincian Tiket')
+                    ->state(function (Destinations $record) use ($from, $to) {
+                        // Ambil items dari transaksi sukses destinasi ini
+                        $breakdown = \App\Models\TransactionItem::query()
+                            ->whereHas('transaction', function ($q) use ($record, $from, $to) {
+                                $q->where('destination_id', $record->id)
+                                    ->where('payment_status', 'succeeded')
+                                    ->whereBetween('created_at', [$from, $to]);
+                            })
+                            ->selectRaw('name, sum(quantity) as total')
+                            ->groupBy('name')
+                            ->pluck('total', 'name');
+
+                        if ($breakdown->isEmpty()) return '-';
+
+                        // Format: "Dewasa: 10, Anak: 5"
+                        return $breakdown->map(fn($qty, $name) => "$name: $qty")->join(', ');
                     })
-                    ->suffix('%')
-                    ->sortable(),
+                    ->size('xs')
+                    ->wrap(),
 
-                Tables\Columns\TextColumn::make('pad_gross')->label('PAD (Gross)')->money('idr')->default(0)->sortable(),
-                // Tables\Columns\TextColumn::make('refunds')->label('Refund')->money('idr')->sortable(),
+                Tables\Columns\TextColumn::make('tickets_used')->label('Dipakai')->numeric()->sortable(),
+
+                Tables\Columns\TextColumn::make('pad_gross')->label('Pendapatan')->money('idr')->sortable()
+                    ->weight('bold')
+                    ->color('success'),
             ])
-            ->defaultSort('pad_gross', 'desc')
             ->paginated([10, 25, 50]);
     }
 }

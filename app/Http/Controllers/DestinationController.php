@@ -161,7 +161,7 @@ class DestinationController extends Controller
 
     public function show(Destinations $destination)
     {
-        $destination->load(['photos', 'category']);
+        $destination->load(['photos', 'category', 'ticketTypes']);
 
         $similar = Destinations::with('photos')
             ->where('id', '!=', $destination->id)

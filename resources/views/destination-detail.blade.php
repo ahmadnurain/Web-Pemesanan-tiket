@@ -50,23 +50,7 @@
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
             <!-- Left: Gallery & Info -->
             <div class="md:col-span-8 space-y-6">
-                <!-- Gallery -->
-                <div class="detail-gallery owl-carousel">
-                    @forelse(($destination->photos ?? collect()) as $p)
-                        <div>
-                            <img loading="lazy" decoding="async" src="{{ asset('storage/' . $p->path) }}"
-                                width="800" height="450"
-                                alt="{{ $destination->name }}"
-                                class="w-full aspect-[16/9] object-cover rounded-xl max-w-full">
-                        </div>
-                    @empty
-                        <div>
-                            <img loading="lazy" decoding="async" src="{{ $coverUrl }}" alt="{{ $destination->name }}"
-                                width="800" height="450"
-                                class="w-full aspect-[16/9] object-cover rounded-xl max-w-full">
-                        </div>
-                    @endforelse
-                </div>
+
 
                 <!-- About -->
                 <section>
@@ -128,19 +112,29 @@
             <!-- Right: Booking Panel -->
             <aside class="md:col-span-4 reveal-2">
                 <div class="rounded-3xl bg-white/80 backdrop-blur-md shadow-xl border border-white/50 p-6 sticky top-24"
-                    data-price="{{ (int) $destination->ticket_price }}" id="bookingPanel">
-                    <div class="flex items-end justify-between mb-6 pb-6 border-b border-gray-100">
-                        <div>
-                            <div class="text-gray-500 text-sm font-medium mb-1">Harga Tiket Masuk</div>
-                            <div class="text-3xl font-bold text-emerald-600">Rp
-                                {{ number_format($destination->ticket_price, 0, ',', '.') }}</div>
+                    id="bookingPanel">
+                    
+                    <!-- Header Harga (Hanya muncul jika SINGLE type / Legacy, jika Multi type harga ada di per-item) -->
+                    @if($destination->ticketTypes->isEmpty())
+                        <div class="flex items-end justify-between mb-6 pb-6 border-b border-gray-100">
+                            <div>
+                                <div class="text-gray-500 text-sm font-medium mb-1">Harga Tiket Masuk</div>
+                                <div class="text-3xl font-bold text-emerald-600">Rp
+                                    {{ number_format($destination->ticket_price, 0, ',', '.') }}</div>
+                            </div>
+                            <div class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg font-bold">
+                                Per Orang
+                            </div>
                         </div>
-                        <div class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg font-bold">
-                            Per Orang
+                    @else
+                        <div class="mb-4 pb-4 border-b border-gray-100">
+                            <div class="text-lg font-bold text-gray-800">Pilih Tiket</div>
+                            <div class="text-sm text-gray-500">Tentukan jumlah tiket sesuai tipe</div>
                         </div>
-                    </div>
+                    @endif
 
                     <div class="space-y-5">
+                        <!-- Tanggal Kunjungan -->
                         <div>
                             <label for="visit_date" class="block text-sm font-bold text-gray-700 mb-2">Tanggal Kunjungan</label>
                             <div class="relative">
@@ -149,40 +143,63 @@
                             </div>
                         </div>
                         
-                        <div>
-                            <label for="ticket_type" class="block text-sm font-bold text-gray-700 mb-2">Tipe Tiket</label>
-                            <select id="ticket_type"
-                                class="w-full rounded-xl border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[48px] px-4 py-2 shadow-sm">
-                                <option value="dewasa" selected>Dewasa</option>
-                                <option value="anak">Anak</option>
-                            </select>
-                        </div>
+                        <!-- Pilihan Tiket -->
+                        @if($destination->ticketTypes->isNotEmpty())
+                            <!-- MODE MULTI TIKET -->
+                            <div class="space-y-3">
+                                @foreach($destination->ticketTypes as $type)
+                                    <div class="flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-white hover:border-emerald-200 transition-colors">
+                                        <div class="flex-1">
+                                            <div class="font-bold text-gray-800 text-sm">{{ $type->name }}</div>
+                                            <div class="text-emerald-600 font-semibold text-xs" data-price="{{ $type->price }}">
+                                                Rp {{ number_format($type->price, 0, ',', '.') }}
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <button type="button" class="w-8 h-8 rounded-lg border border-gray-200 bg-gray-50 hover:bg-emerald-50 text-gray-600 flex items-center justify-center font-bold"
+                                                onclick="updateDetailQty('{{ $type->id }}', -1)">-</button>
+                                            
+                                            <input type="number" 
+                                                id="qty_{{ $type->id }}" 
+                                                data-type-id="{{ $type->id }}"
+                                                value="0" 
+                                                min="0"
+                                                class="w-10 text-center border-none bg-transparent font-bold text-gray-800 focus:ring-0 p-0 detail-qty-multi" 
+                                                readonly />
 
-                        <div>
-                            <label for="ticket_qty" class="block text-sm font-bold text-gray-700 mb-2">Jumlah Tiket</label>
-                            <div class="flex items-center gap-3">
-                                <button type="button" class="w-12 h-12 rounded-xl border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-200 text-gray-600 hover:text-emerald-600 transition-all flex items-center justify-center text-xl font-bold shadow-sm" id="qty_minus"
-                                    aria-label="Kurangi jumlah">−</button>
-                                <input type="number" id="ticket_qty" min="1" value="1"
-                                    class="flex-1 text-center rounded-xl border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-h-[48px] font-bold text-lg shadow-sm" />
-                                <button type="button" class="w-12 h-12 rounded-xl border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-200 text-gray-600 hover:text-emerald-600 transition-all flex items-center justify-center text-xl font-bold shadow-sm" id="qty_plus"
-                                    aria-label="Tambah jumlah">+</button>
+                                            <button type="button" class="w-8 h-8 rounded-lg border border-gray-200 bg-gray-50 hover:bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold"
+                                                onclick="updateDetailQty('{{ $type->id }}', 1)">+</button>
+                                        </div>
+                                    </div>
+                                @endforeach
                             </div>
-                        </div>
+                        @else
+                            <!-- MODE SINGLE / LEGACY -->
+                            <div>
+                                <label for="ticket_qty" class="block text-sm font-bold text-gray-700 mb-2">Jumlah Tiket</label>
+                                <div class="flex items-center gap-3">
+                                    <button type="button" id="legacy_minus" class="w-12 h-12 rounded-xl border border-gray-200 bg-white hover:bg-emerald-50 text-gray-600 flex items-center justify-center text-xl font-bold">−</button>
+                                    <input type="number" id="legacy_qty" min="1" value="1"
+                                        class="flex-1 text-center rounded-xl border-gray-200 bg-white focus:ring-2 focus:ring-emerald-500 font-bold text-lg" 
+                                        readonly />
+                                    <button type="button" id="legacy_plus" class="w-12 h-12 rounded-xl border border-gray-200 bg-white hover:bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-bold">+</button>
+                                </div>
+                            </div>
+                        @endif
 
+                        <!-- Total Pembayaran -->
                         <div class="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 mt-6">
                             <div class="flex items-center justify-between">
                                 <span class="text-gray-600 font-medium">Total Pembayaran</span>
-                                <span class="text-xl font-bold text-emerald-700" id="order_total">Rp
-                                    {{ number_format($destination->ticket_price, 0, ',', '.') }}</span>
+                                <span class="text-xl font-bold text-emerald-700" id="detail_total_display">Rp 0</span>
                             </div>
                         </div>
 
                         <div class="flex flex-col gap-3 pt-2">
-                            <a href="{{ route('order.form', $destination) }}" id="order_cta"
+                            <button type="button" id="btn_book_now"
                                 class="w-full inline-flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg min-h-[52px] px-6 rounded-xl shadow-lg shadow-emerald-200 hover:shadow-emerald-300 hover:-translate-y-1 transition-all">
                                 <i class="fas fa-ticket-alt" aria-hidden="true"></i> Pesan Sekarang
-                            </a>
+                            </button>
                             <button type="button"
                                 class="w-full inline-flex justify-center items-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-semibold min-h-[52px] px-6 rounded-xl transition-all"
                                 onclick="window.history.back()">
@@ -198,7 +215,7 @@
             </aside>
         </div>
 
-        <!-- Similar destinations -->
+        <!-- Similar destinations (tetap sama code aslinya) -->
         <section class="mt-32 reveal">
             <div class="flex items-center justify-between mb-8">
                 <h2 class="text-3xl font-bold text-gray-900">Mungkin Anda Suka</h2>
@@ -212,7 +229,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     @foreach ($similar as $item)
                         @php($p = optional($item->photos->first() ?? null)->path ?? null)
-                        <a href="{{ url('/destinasi') }}?q={{ urlencode($item->name) }}"
+                        <a href="{{ route('destinations.show', $item) }}"
                             class="group rounded-2xl overflow-hidden bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-white/50 flex flex-col h-full">
                             <div class="relative h-56 overflow-hidden">
                                 <img loading="lazy" decoding="async"
@@ -244,92 +261,110 @@
 @section('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-             // Init gallery
-            if (typeof $ !== 'undefined') {
-                $(document).ready(function(){
-                    const $gal = $('.detail-gallery');
-                    if ($gal.length && typeof $.fn.owlCarousel !== 'undefined' && !$gal.hasClass('owl-loaded')) {
-                        $gal.owlCarousel({
-                            loop: true,
-                            nav: true,
-                            dots: false,
-                            autoHeight: true,
-                            responsive: {
-                                0: {
-                                    items: 1,
-                                    margin: 12
-                                },
-                                640: {
-                                    items: 1,
-                                    margin: 16
-                                },
-                                1024: {
-                                    items: 1,
-                                    margin: 16
-                                }
-                            }
-                        });
-                    }
-                });
-            }
+             // Logic Multi Ticket
+             window.updateDetailQty = (id, change) => {
+                const el = document.getElementById('qty_' + id);
+                if(!el) return;
+                let val = parseInt(el.value || 0);
+                val += change;
+                if(val < 0) val = 0;
+                el.value = val;
+                recalcDetailTotal();
+             };
+
+             // Logic Legacy Ticket
+             const legacyQty = document.getElementById('legacy_qty');
+             const legacyBasePrice = {{ (int) $destination->ticket_price }};
+             
+             document.getElementById('legacy_minus')?.addEventListener('click', () => {
+                 if(!legacyQty) return;
+                 let v = parseInt(legacyQty.value||1);
+                 if(v > 1) v--; 
+                 legacyQty.value = v;
+                 recalcDetailTotal();
+             });
+             document.getElementById('legacy_plus')?.addEventListener('click', () => {
+                 if(!legacyQty) return;
+                 let v = parseInt(legacyQty.value||1);
+                 v++;
+                 legacyQty.value = v;
+                 recalcDetailTotal();
+             });
+
+             const totalDisplay = document.getElementById('detail_total_display');
+             
+             function recalcDetailTotal() {
+                 let total = 0;
+                 // Cek multi
+                 const multiInputs = document.querySelectorAll('.detail-qty-multi');
+                 if(multiInputs.length > 0) {
+                     multiInputs.forEach(i => {
+                         const q = parseInt(i.value||0);
+                         // cari price sibling
+                         const container = i.closest('.flex-1')?.parentElement; // div flex
+                         // ah struktur DOM tadi: flex justify-between -> div flex-1 -> ... 
+                         // my structure: 
+                         // .flex.items-center.justify-between
+                         //    div.flex-1 -> price div [data-price]
+                         //    div.flex.gap-2 -> input
+                         const row = i.closest('.justify-between');
+                         const priceEl = row?.querySelector('[data-price]');
+                         const p = parseInt(priceEl?.getAttribute('data-price') || 0);
+                         total += q * p;
+                     });
+                 } else if(legacyQty) {
+                     total = parseInt(legacyQty.value||1) * legacyBasePrice;
+                 }
+                 
+                 if(totalDisplay) {
+                     totalDisplay.textContent = 'Rp ' + total.toLocaleString('id-ID');
+                 }
+             }
+
+             // Init
+             recalcDetailTotal();
+
+             // Handle Tombol Pesan
+             const btnBook = document.getElementById('btn_book_now');
+             const dateEl = document.getElementById('visit_date');
+             
+             btnBook?.addEventListener('click', () => {
+                 const payload = {
+                     dest_id: {{ $destination->id }},
+                     date: dateEl?.value || null
+                 };
+
+                 const multiInputs = document.querySelectorAll('.detail-qty-multi');
+                 if(multiInputs.length > 0) {
+                     // Mode Multi
+                     let tickets = {};
+                     let totalQ = 0;
+                     multiInputs.forEach(i => {
+                         const q = parseInt(i.value||0);
+                         const tid = i.getAttribute('data-type-id');
+                         if(q > 0) {
+                             tickets[tid] = q;
+                             totalQ += q;
+                         }
+                     });
+                     if(totalQ === 0) {
+                         alert('Harap pilih minimal 1 tiket.');
+                         return;
+                     }
+                     payload.tickets = tickets; 
+                 } else {
+                     // Mode Legacy
+                     payload.qty = parseInt(legacyQty?.value||1);
+                 }
+
+                 // Simpan ke session storage
+                 try {
+                     sessionStorage.setItem('prefill_order', JSON.stringify(payload));
+                 }catch(e){}
+                 
+                 // Redirect
+                 window.location.href = "{{ route('order.form', $destination) }}";
+             });
         });
-
-        // Total calculation
-        (function() {
-            const panel = document.getElementById('bookingPanel');
-            if (!panel) return;
-            const base = parseInt(panel.getAttribute('data-price') || '0', 10);
-            const qty = document.getElementById('ticket_qty');
-            const minus = document.getElementById('qty_minus');
-            const plus = document.getElementById('qty_plus');
-            const totalEl = document.getElementById('order_total');
-            const typeSel = document.getElementById('ticket_type');
-            const dateEl = document.getElementById('visit_date');
-            const cta = document.getElementById('order_cta');
-
-            const fmt = (n) => {
-                if (typeof formatRupiah === 'function') return formatRupiah(n).replace('IDR', 'Rp');
-                return new Intl.NumberFormat('id-ID', {
-                    style: 'currency',
-                    currency: 'IDR',
-                    maximumFractionDigits: 0
-                }).format(n);
-            };
-            const calc = () => {
-                let q = parseInt(qty.value || '1', 10);
-                if (!q || q < 1) q = 1;
-                qty.value = q;
-                let factor = 1; // placeholder: tipe tidak mengubah harga
-                const tot = base * q * factor;
-                if (totalEl) totalEl.textContent = fmt(tot);
-            };
-            minus?.addEventListener('click', () => {
-                qty.stepDown();
-                calc();
-            });
-            plus?.addEventListener('click', () => {
-                qty.stepUp();
-                calc();
-            });
-            qty?.addEventListener('input', calc);
-            typeSel?.addEventListener('change', calc);
-            calc();
-
-            // Optional: attach querystring on CTA
-            cta?.addEventListener('click', function(e) {
-                const payload = {
-                    dest_id: {{ $destination->id }},
-                    date: dateEl?.value || null,
-                    type: typeSel?.value || 'dewasa',
-                    qty: parseInt(qty?.value || '1', 10) || 1
-                };
-                try {
-                    sessionStorage.setItem('prefill_order', JSON.stringify(payload));
-                } catch (_) {}
-
-                // biarkan browser membuka href asli (tanpa ?query)
-                // (jangan preventDefault)
-            });
-        })();
     </script>
 @endsection

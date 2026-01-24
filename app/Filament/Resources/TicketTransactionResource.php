@@ -147,6 +147,11 @@ class TicketTransactionResource extends Resource
                     ->sortable()
                     ->searchable(), // Menambahkan kemampuan pencarian
 
+                TextColumn::make('visit_date')
+                    ->label('Visit Date')
+                    ->date('d M Y')
+                    ->sortable(),
+
                 // Kolom destination name
                 TextColumn::make('destination.name')
                     ->label('Destination')

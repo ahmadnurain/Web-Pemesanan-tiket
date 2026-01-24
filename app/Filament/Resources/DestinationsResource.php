@@ -128,6 +128,33 @@ class DestinationsResource extends Resource
                                             ->required(),
                                     ])
                                     ->columnSpanFull(),
+
+                                Forms\Components\Section::make('Variasi Tiket (Mix)')
+                                    ->description('Tambahkan jenis tiket (misal: Dewasa, Anak) jika ingin opsi checkout campuran.')
+                                    ->schema([
+                                        Forms\Components\Repeater::make('ticketTypes')
+                                            ->relationship('ticketTypes')
+                                            ->schema([
+                                                Forms\Components\TextInput::make('name')
+                                                    ->label('Nama Tiket (e.g. Dewasa)')
+                                                    ->required(),
+                                                Forms\Components\TextInput::make('price')
+                                                    ->label('Harga')
+                                                    ->required()
+                                                    ->numeric()
+                                                    ->prefix('Rp')
+                                                    ->minValue(0),
+                                                Forms\Components\Textarea::make('description')
+                                                    ->label('Keterangan')
+                                                    ->rows(2)
+                                                    ->columnSpanFull(),
+                                            ])
+                                            ->columns(2)
+                                            ->defaultItems(0)
+                                            ->reorderable()
+                                            ->createItemButtonLabel('Tambah Jenis Tiket'),
+                                    ])
+                                    ->collapsed(),
                             ]),
                     ]),
             ]);
@@ -247,5 +274,11 @@ class DestinationsResource extends Resource
             'create' => Pages\CreateDestinations::route('/create'),
             'edit' => Pages\EditDestinations::route('/{record}/edit'),
         ];
+    }
+
+    // Helper untuk format rupiah 
+    public static function formatRupiah($amount)
+    {
+        return 'Rp ' . number_format($amount, 0, ',', '.');
     }
 }

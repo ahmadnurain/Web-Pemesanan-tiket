@@ -1,7 +1,7 @@
 <?php
 
 use App\Filament\Resources\CategoryResource;
-use App\Http\Controllers\Admin\TicketScanController;
+use App\Http\Controllers\TicketScanController;
 use App\Http\Controllers\DestinationController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderController;
@@ -33,10 +33,10 @@ Route::post('/payment/finalize', [OrderController::class, 'finalize'])->name('pa
 Route::get('/payment/success', [OrderController::class, 'success'])->name('payment.success');
 
 
-Route::get('/ticket/download/{transaction:uuid}', [OrderController::class, 'downloadTicket'])
+Route::get('/ticket/download/{transaction}', [OrderController::class, 'downloadTicket'])
     ->name('ticket.download')
     ->middleware('signed'); // WAJIB
-Route::post('/ticket/{transaction:uuid}/resend', [OrderController::class, 'resendEticket'])
+Route::post('/ticket/{transaction}/resend', [OrderController::class, 'resendEticket'])
     ->name('ticket.resend')
     ->middleware(['signed']);
 
@@ -48,9 +48,20 @@ Route::post('/pesanan/cek', [OrderLookupController::class, 'search'])
     ->name('orders.lookup.search');
 
 // Kirim ulang link (rate limit)
-Route::post('/pesanan/kirim-link/{transaction:uuid}', [OrderLookupController::class, 'sendDownloadLink'])
+Route::post('/pesanan/kirim-link/{transaction}', [OrderLookupController::class, 'sendDownloadLink'])
     ->name('orders.lookup.send_link')
     ->middleware(['throttle:5,1']);
+
+// Halaman hasil lookup (menampilkan daftar tiket)
+Route::get('/pesanan/hasil', [OrderLookupController::class, 'showResult'])
+    ->name('orders.lookup.result');
+
+// Reschedule
+Route::get('/pesanan/{transaction}/reschedule', [OrderLookupController::class, 'showRescheduleForm'])
+    ->name('orders.reschedule.form');
+Route::post('/pesanan/{transaction}/reschedule', [OrderLookupController::class, 'processReschedule'])
+    ->name('orders.reschedule.process');
+
 // Route::get('/test-email', function () {
 //     $transaction = \App\Models\TicketTransaction::latest()->first();
 //     Mail::to($transaction->email)->send(new TicketMail($transaction));

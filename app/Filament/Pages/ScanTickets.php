@@ -44,19 +44,19 @@ class ScanTickets extends Page
     {
         $this->reset(['result', 'error']);
 
-        [$uuid, $sig] = array_pad(explode('|', $payload, 2), 2, null);
-        if (!$uuid) {
+        [$codeCandidate, $sig] = array_pad(explode('|', $payload, 2), 2, null);
+        if (!$codeCandidate) {
             $this->error = 'Payload QR tidak valid.';
             Notification::make()->title('QR tidak valid')->danger()->send();
             return;
         }
 
+        // Cari berdasarkan ticket_code
+        // (Kolom UUID sudah dihapus, jadi payload QR sekarang adalah ticket_code)
         $tx = TicketTransaction::with('destination')
-            ->where(function ($q) use ($uuid) {
-                $q->where('uuid', $uuid)
-                    ->orWhere('ticket_code', $uuid);
-            })
+            ->where('ticket_code', $codeCandidate)
             ->first();
+
         if (!$tx) {
             $this->error = 'Kode tiket tidak ditemukan.';
             Notification::make()->title('Tiket tidak ditemukan')->warning()->send();
@@ -82,7 +82,8 @@ class ScanTickets extends Page
 
         // Verifikasi tanda tangan QR (jika ada)
         if ($sig) {
-            $expected = hash_hmac('sha256', $uuid, (string) $tx->qr_secret);
+            // Kita hash ticket_code dan secret
+            $expected = hash_hmac('sha256', $tx->ticket_code, (string) $tx->qr_secret);
             if (!hash_equals($expected, $sig)) {
                 $this->error = 'Tanda tangan QR tidak valid.';
                 Notification::make()->title('Tanda tangan QR tidak valid')->danger()->send();
@@ -90,29 +91,33 @@ class ScanTickets extends Page
             }
         }
 
-        // Cek Tanggal Kunjungan (Kadaluarsa)
+        // Cek Tanggal Kunjungan
         $today = now()->format('Y-m-d');
         $visitDate = $tx->visit_date ? \Carbon\Carbon::parse($tx->visit_date)->format('Y-m-d') : null;
 
         if ($visitDate && $visitDate !== $today) {
-            // Tiket Kadaluarsa (Tanggal tidak sesuai)
-            $tx->scan_count = (int) $tx->scan_count + 1;
-            $tx->last_scanned_at = now();
-            $tx->save();
+            $parsedVisit = \Carbon\Carbon::parse($visitDate);
+            $isTooEarly = $parsedVisit->isFuture(); // Tiket untuk masa depan?
+
+            // Cek status khusus
+            $statusResult = $isTooEarly ? 'too_early' : 'expired';
+            $titleMsg = $isTooEarly ? 'Tiket Belum Berlaku' : 'Tiket Kadaluarsa';
+
+            // Tidak ada update scan_count/last_scanned_at lagi
 
             TicketScan::create([
                 'ticket_transaction_id' => $tx->id,
                 'user_id'               => $user?->id,
-                'result'                => 'expired',
+                'result'                => $statusResult,
                 'ip'                    => request()->ip(),
                 'user_agent'            => (string) Str::limit(request()->userAgent() ?? '', 255),
             ]);
 
-            $this->result = ['status' => 'expired', 'tx' => $tx];
+            $this->result = ['status' => $statusResult, 'tx' => $tx];
 
             Notification::make()
-                ->title('Tiket Kadaluarsa')
-                ->body('Tanggal kunjungan tidak sesuai. Tiket untuk: ' . \Carbon\Carbon::parse($visitDate)->format('d M Y'))
+                ->title($titleMsg)
+                ->body('Tiket berlaku untuk tanggal: ' . $parsedVisit->translatedFormat('d F Y') . ($isTooEarly ? ' (Belum saatnya)' : ' (Sudah lewat)'))
                 ->danger()
                 ->send();
 
@@ -121,16 +126,12 @@ class ScanTickets extends Page
 
         $already = $tx->ticket_status === 'used' || !empty($tx->used_at);
 
-        // Catat selalu aktivitas scan
-        $tx->scan_count      = (int) $tx->scan_count + 1;
-        $tx->last_scanned_at = now();
-        $tx->save();
-
         if (!$already) {
             $tx->ticket_status = 'used';
             $tx->used_at       = now();
             $tx->scanned_by    = $user?->id;
         }
+        // column scan_count & last_scanned_at deleted
         $tx->save();
 
         TicketScan::create([

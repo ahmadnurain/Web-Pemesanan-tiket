@@ -85,7 +85,7 @@
                     {{-- Ticket Code --}}
                     <div>
                         <label for="ticket_code" class="block text-sm font-bold text-gray-700 mb-1">
-                            Kode Tiket <span class="text-gray-400 font-normal text-xs">(opsional)</span>
+                            Kode Tiket
                         </label>
                         <div class="relative">
                             <input id="ticket_code" name="ticket_code" type="text" value="{{ old('ticket_code') }}"
@@ -101,7 +101,7 @@
                     {{-- Last 4 Phone --}}
                     <div>
                         <label for="phone_last4" class="block text-sm font-bold text-gray-700 mb-1">
-                            4 Digit Akhir No. HP <span class="text-gray-400 font-normal text-xs">(opsional)</span>
+                            4 Digit Akhir No. HP
                         </label>
                         <div class="relative">
                             <input id="phone_last4" name="phone_last4" type="text" inputmode="numeric" pattern="\d{4}"
@@ -127,9 +127,9 @@
                 </div>
 
                 {{-- Submit --}}
-                <button
-                    class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-white px-4 py-3.5 font-bold text-lg hover:bg-emerald-700 shadow-lg shadow-emerald-200 hover:shadow-emerald-300 hover:-translate-y-1 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <i class="fas fa-paper-plane"></i> Kirim Tautan ke Email
+                <button type="submit" id="submitBtn"
+                    class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 text-white px-4 py-3.5 font-bold text-lg hover:bg-emerald-700 shadow-lg shadow-emerald-200 hover:shadow-emerald-300 hover:-translate-y-1 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                    <i class="fas fa-search"></i> Cari Pesanan
                 </button>
             </form>
 
@@ -145,16 +145,8 @@
 
 @section('scripts')
     <script>
-        // Validasi ringan di sisi klien: email wajib + (ticket_code || phone_last4)
-        document.getElementById('lookupForm')?.addEventListener('submit', function(e) {
-            const email = document.getElementById('email')?.value.trim();
-            const code = document.getElementById('ticket_code')?.value.trim();
-            const last4 = document.getElementById('phone_last4')?.value.trim();
-
-            if (!email || (!code && !last4)) {
-                e.preventDefault();
-                alert('Wajib isi Email + salah satu: Kode Tiket atau 4 Digit Terakhir No. HP.');
-            }
-        });
+    <script>
+        // Script removed to allow standard form submission
+    </script>
     </script>
 @endsection

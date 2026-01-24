@@ -66,6 +66,7 @@
                         'ok' => 'bg-emerald-500',
                         'used' => 'bg-amber-500',
                         'expired' => 'bg-red-500',
+                        'too_early' => 'bg-blue-500',
                         default => 'bg-gray-500'
                     };
                     
@@ -73,35 +74,41 @@
                         'ok' => 'border-emerald-200 dark:border-emerald-700',
                         'used' => 'border-amber-200 dark:border-amber-700',
                         'expired' => 'border-red-200 dark:border-red-700',
+                        'too_early' => 'border-blue-200 dark:border-blue-700',
                         default => 'border-gray-200 dark:border-gray-700'
                     };
 
                     $title = match($status) {
-                        'ok' => 'TIKET VALID',
-                        'used' => 'SUDAH DIPAKAI',
-                        'expired' => 'TIKET KADALUARSA',
-                        default => 'STATUS TIDAK DIKETAHUI'
+                        'ok' => 'Silakan Masuk',
+                        'used' => 'Sudah Check-In',
+                        'expired' => 'Akses Ditolak',
+                        'too_early' => 'Belum Jadwalnya',
+                        default => 'Status Tidak Diketahui'
                     };
                 @endphp
 
                 <div class="overflow-hidden rounded-2xl border {{ $borderClass }} bg-white shadow-lg w-full max-w-md mx-auto md:max-w-none dark:bg-gray-800">
                     <div class="{{ $bgClass }} p-6 text-center text-gray-900">
                         {{-- Icon Status --}}
-                        <div class="mx-auto mb-2 h-12 w-12 opacity-90 flex items-center justify-center">
+                        <div class="mx-auto mb-3 h-10 w-10 opacity-90 flex items-center justify-center rounded-full bg-white/20 p-1">
                             @if($status === 'ok')
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-12 w-12 dark:text-white text-gray-900">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-full w-full">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             @elseif($status === 'used')
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-12 w-12 dark:text-white text-gray-900">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-full w-full">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                                 </svg>
                             @elseif($status === 'expired')
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-12 w-12 dark:text-white text-gray-900">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-full w-full">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                </svg>
+                            @elseif($status === 'too_early')
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-full w-full">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
                             @else
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-12 w-12 dark:text-white text-gray-900">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="h-full w-full">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zM12 15.75h.007v.008H12v-.008z" />
                                 </svg>
                             @endif
@@ -126,25 +133,47 @@
                                 {{ $tx->visit_date ? \Carbon\Carbon::parse($tx->visit_date)->format('d M Y') : '-' }}
                             </span>
                         </div>
-                        <div class="flex justify-between items-center border-b border-gray-100 pb-2 dark:border-gray-700">
-                            <span class="text-sm text-gray-500 dark:text-gray-400">Jumlah Tiket</span>
-                            <span class="font-semibold text-gray-900 text-right dark:text-gray-100">{{ $tx->total_tickets }} Orang</span>
-                        </div>
+                        @if($tx->items && $tx->items->count() > 0)
+                            <div class="border-b border-gray-100 pb-2 dark:border-gray-700">
+                                <span class="text-sm text-gray-500 dark:text-gray-400 block mb-1">Rincian Tiket</span>
+                                <div class="space-y-1">
+                                    @foreach($tx->items as $item)
+                                        <div class="flex justify-between items-center text-sm">
+                                            <span class="text-gray-600 dark:text-gray-300">{{ $item->name }}</span>
+                                            <span class="font-semibold text-gray-900 dark:text-gray-100">x{{ $item->quantity }}</span>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @else
+                            <div class="flex justify-between items-center border-b border-gray-100 pb-2 dark:border-gray-700">
+                                <span class="text-sm text-gray-500 dark:text-gray-400">Jumlah Tiket</span>
+                                <span class="font-semibold text-gray-900 text-right dark:text-gray-100">{{ $tx->total_tickets }} Orang</span>
+                            </div>
+                        @endif
                         
                         @if($status === 'ok')
                         <div class="mt-4 rounded-lg bg-emerald-50 p-3 text-center text-sm font-medium text-emerald-700 border border-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800">
                             <div class="flex items-center justify-center gap-2">
                                 <x-heroicon-s-check-circle class="h-5 w-5" />
-                                <span>Tiket berhasil divalidasi</span>
+                                <span>Tiket valid & terverifikasi</span>
                             </div>
                         </div>
                         @elseif($status === 'expired')
                         <div class="mt-4 rounded-lg bg-red-50 p-3 text-center text-sm font-medium text-red-700 border border-red-100 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800">
                             <div class="flex items-center justify-center gap-2">
                                 <x-heroicon-s-x-circle class="h-5 w-5" />
-                                <span>Tiket Kadaluarsa</span>
+                                <span>Masa berlaku tiket telah habis</span>
                             </div>
                             <div class="text-xs mt-1 opacity-80">Berlaku: {{ $tx->visit_date ? \Carbon\Carbon::parse($tx->visit_date)->format('d M Y') : '-' }}</div>
+                        </div>
+                        @elseif($status === 'too_early')
+                        <div class="mt-4 rounded-lg bg-blue-50 p-3 text-center text-sm font-medium text-blue-700 border border-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">
+                            <div class="flex items-center justify-center gap-2">
+                                <x-heroicon-s-clock class="h-5 w-5" />
+                                <span>Tiket belum memasuki jadwal</span>
+                            </div>
+                            <div class="text-xs mt-1 opacity-80">Baru berlaku pada: {{ $tx->visit_date ? \Carbon\Carbon::parse($tx->visit_date)->format('d M Y') : '-' }}</div>
                         </div>
                         @endif
                     </div>

@@ -96,22 +96,61 @@
                                     class="w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm px-4 py-3" />
                             </div>
 
-                            <!-- Tipe Tiket -->
-                            <div>
-                                <label for="ticket_type" class="block text-sm font-bold text-gray-700 mb-1">Tipe Tiket</label>
-                                <select id="ticket_type" name="ticket_type"
-                                    class="w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm px-4 py-3">
-                                    <option value="dewasa" selected>Dewasa</option>
-                                    <option value="anak">Anak</option>
-                                </select>
-                            </div>
-
-                            <!-- Jumlah Tiket -->
+                            <!-- LOGIKA TIKET BARU: Multi Type atau Single -->
                             <div class="md:col-span-2">
-                                <label for="total_tickets" class="block text-sm font-bold text-gray-700 mb-1">Jumlah Tiket</label>
-                                <input type="number" id="total_tickets" name="total_tickets" placeholder="1"
-                                    required min="1" step="1"
-                                    class="w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm px-4 py-3" />
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Pilihan Tiket</label>
+                                
+                                @if($destination->ticketTypes && $destination->ticketTypes->count() > 0)
+                                    <!-- MULTI TYPE -->
+                                    <div class="space-y-3">
+                                        @foreach($destination->ticketTypes as $type)
+                                            <div class="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-xl hover:border-emerald-300 transition-colors">
+                                                <div>
+                                                    <div class="font-bold text-gray-800">{{ $type->name }}</div>
+                                                    <div class="text-emerald-600 font-semibold text-sm" data-price="{{ $type->price }}" data-type="multi">
+                                                        IDR {{ number_format($type->price, 0, ',', '.') }}
+                                                    </div>
+                                                    @if($type->description)
+                                                        <div class="text-xs text-gray-400 mt-0.5">{{ $type->description }}</div>
+                                                    @endif
+                                                </div>
+                                                <div class="flex items-center gap-3">
+                                                    <button type="button" class="w-8 h-8 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center font-bold"
+                                                        onclick="updateQty('{{ $type->id }}', -1)">-</button>
+                                                    
+                                                    <input type="number" 
+                                                           id="qty_{{ $type->id }}" 
+                                                           name="ticket_types[{{ $type->id }}]" 
+                                                           value="0" 
+                                                           min="0" 
+                                                           class="w-12 text-center border-none bg-transparent font-bold text-gray-800 focus:ring-0 p-0 ticket-qty-multi" 
+                                                           readonly />
+
+                                                    <button type="button" class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 hover:bg-emerald-200 flex items-center justify-center font-bold"
+                                                        onclick="updateQty('{{ $type->id }}', 1)">+</button>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                    <!-- Hidden input untuk kompatibilitas script lama jika perlu, tapi kita akan ubah scriptnya -->
+                                @else
+                                    <!-- LEGACY SINGLE TYPE -->
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <label for="ticket_type" class="block text-xs font-semibold text-gray-500 mb-1">Kategori</label>
+                                            <select id="ticket_type" name="ticket_type"
+                                                class="w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm px-4 py-3">
+                                                <option value="regular" selected>Regular</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label for="total_tickets" class="block text-xs font-semibold text-gray-500 mb-1">Jumlah</label>
+                                            <input type="number" id="total_tickets" name="total_tickets" placeholder="1"
+                                                value="1" min="1" step="1"
+                                                class="w-full rounded-xl border-gray-200 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-sm px-4 py-3" />
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
@@ -157,11 +196,10 @@
 
 @section('scripts')
     <script>
-        // === Ambil harga tiket secara aman (hindari 60.000 -> 60) ===
-        const ticketPrice = (() => {
-            const raw = @json($destination->ticket_price); // aman untuk number/string
-            if (typeof raw === 'number') return raw; // contoh: 60000
-            // kalau string, buang semua non-digit (titik/koma/IDR)
+        // === Ambil harga tiket legacy (untuk fallback) ===
+        const legacyPrice = (() => {
+            const raw = @json($destination->ticket_price); 
+            if (typeof raw === 'number') return raw; 
             const cleaned = String(raw).replace(/[^\d]/g, '');
             return parseInt(cleaned, 10) || 0;
         })();
@@ -171,37 +209,61 @@
             return n ? `IDR ${Number(n).toLocaleString('id-ID')}` : 'IDR 0';
         }
 
-        // --- Ambil elemen sekali ---
-        const qtyEl = document.getElementById('total_tickets');
-        const amtEl = document.getElementById('amount'); // input tampilan (readonly)
-        const sumQty = document.getElementById('summaryTickets');
-        const sumTot = document.getElementById('summaryTotal');
-        const dateEl = document.getElementById('visit_date');
-        const typeEl = document.getElementById('ticket_type');
+        const sumQtyEl = document.getElementById('summaryTickets');
+        const sumTotEl = document.getElementById('summaryTotal');
+        const legacyQtyEl = document.getElementById('total_tickets'); // Legacy input
 
-        // (Opsional) kalau kamu punya hidden integer murni:
-        // <input type="hidden" id="amount_raw" name="amount" />
-        const amtRaw = document.getElementById('amount_raw');
+        // --- Fungsi untuk tombol + / - pada Multi Ticket ---
+        window.updateQty = function(id, change) {
+            const input = document.getElementById('qty_' + id);
+            if (!input) return;
+            let val = parseInt(input.value || '0', 10);
+            val += change;
+            if (val < 0) val = 0;
+            input.value = val;
+            computeAndRenderTotal();
+        };
 
-        // --- Hitung & render total ---
+        // --- Hitung & Render Total ---
         function computeAndRenderTotal() {
-            const qty = Math.max(1, parseInt(qtyEl?.value || '1', 10) || 1);
-            if (qtyEl) qtyEl.value = qty;
+            let totalQty = 0;
+            let totalPrice = 0;
 
-            // kalau nanti tipe tiket beda harga, bisa pakai factor di sini
-            // let factor = (typeEl?.value === 'anak') ? 0.8 : 1;
-            // const total = ticketPrice * qty * factor;
-            const total = ticketPrice * qty;
+            // Cek apakah mode Multi Ticket aktif?
+            const multiInputs = document.querySelectorAll('.ticket-qty-multi');
+            
+            if (multiInputs.length > 0) {
+                // Mode Multi
+                multiInputs.forEach(input => {
+                    const qty = parseInt(input.value || '0', 10);
+                    if (qty > 0) {
+                        // Cari harga dari elemen sibling/parent
+                        // Struktur: container -> div(kiri) -> price div
+                        const container = input.closest('.justify-between'); 
+                        const priceEl = container ? container.querySelector('[data-price]') : null;
+                        const price = priceEl ? parseInt(priceEl.getAttribute('data-price'), 10) : 0;
+                        
+                        totalQty += qty;
+                        totalPrice += (qty * price);
+                    }
+                });
+            } else {
+                // Mode Legacy
+                if (legacyQtyEl) {
+                    const qty = parseInt(legacyQtyEl.value || '1', 10);
+                    // Legacy price
+                    totalQty = qty;
+                    totalPrice = qty * legacyPrice;
+                }
+            }
 
-            if (amtEl) amtEl.value = fmtIDR(total); // tampilan
-            if (amtRaw) amtRaw.value = total; // kirim integer murni ke server (opsional)
-            if (sumQty) sumQty.textContent = qty;
-            if (sumTot) sumTot.textContent = fmtIDR(total);
+            if (sumQtyEl) sumQtyEl.textContent = totalQty;
+            if (sumTotEl) sumTotEl.textContent = fmtIDR(totalPrice);
         }
 
-        // --- Pasang listener DULU ---
-        qtyEl?.addEventListener('input', computeAndRenderTotal);
-        typeEl?.addEventListener('change', computeAndRenderTotal);
+        // --- Definisi Elemen untuk Prefill (Restored) ---
+        const dateEl = document.getElementById('visit_date');
+        const typeEl = document.getElementById('ticket_type'); // Legacy select
 
         // --- Prefill dari sessionStorage, lalu HITUNG ---
         (function prefillFromSessionStorage() {
@@ -217,90 +279,82 @@
                     return;
                 }
                 if (dateEl && data.date) dateEl.value = data.date;
+
+                // Handle Legacy Prefill
                 if (typeEl && data.type) typeEl.value = data.type;
-                if (qtyEl && data.qty) qtyEl.value = data.qty;
+                if (legacyQtyEl && data.qty) legacyQtyEl.value = data.qty;
+
+                // Handle Multi Tickets Prefill
+                if (data.tickets && typeof data.tickets === 'object') {
+                    for (const [tid, qty] of Object.entries(data.tickets)) {
+                         const el = document.getElementById('qty_' + tid);
+                         if (el) el.value = qty;
+                         // Jika input native hidden/readonly, trigger input event manual mungkin diperlukan
+                         // tapi karena kita panggil computeAndRenderTotal di akhir, display aman.
+                    }
+                }
 
                 computeAndRenderTotal(); // hitung setelah prefill
                 sessionStorage.removeItem('prefill_order');
-            } catch {
+            } catch (e) {
+                console.error(e);
                 computeAndRenderTotal();
             }
         })();
 
-        // --- Validasi submit sederhana ---
+        // --- Listeners ---
+        // Listener untuk Legacy
+        legacyQtyEl?.addEventListener('input', computeAndRenderTotal);
+        // Listener untuk Multi (input manual)
+        document.querySelectorAll('.ticket-qty-multi').forEach(el => {
+            el.addEventListener('input', computeAndRenderTotal);
+        });
+
+        // Initialize
+        computeAndRenderTotal();
+
+        // --- Validasi Submit ---
         document.getElementById('orderForm')?.addEventListener('submit', function(e) {
-            const totalTickets = parseInt(qtyEl?.value || '0', 10) || 0;
-            if (totalTickets <= 0) {
-                alert('Jumlah tiket harus lebih dari 0!');
+            let total = 0;
+            const multiInputs = document.querySelectorAll('.ticket-qty-multi');
+            if (multiInputs.length > 0) {
+                multiInputs.forEach(i => total += parseInt(i.value||0, 10));
+            } else {
+                total = parseInt(legacyQtyEl?.value||0, 10);
+            }
+
+            if (total <= 0) {
+                alert('Mohon pilih minimal satu tiket!');
                 e.preventDefault();
             }
         });
-        // --- Validasi Input (Nama, HP, Email) ---
+
+        // --- Validasi Input Teks (Nama, HP) ---
+        // (Tetap sama seperti sebelumnya)
         const nameInput = document.getElementById('name');
         const nameError = document.getElementById('nameError');
-        
         const phoneInput = document.getElementById('phone_number'); 
         const phoneError = document.getElementById('phoneError');
-        
-        const emailInput = document.getElementById('email');
         const submitBtn = document.getElementById('submitBtn');
 
         function validateInputs() {
             if (!nameInput || !phoneInput || !submitBtn) return;
+            const isNameValid = /^[a-zA-Z\s]*$/.test(nameInput.value);
+            nameError.classList.toggle('hidden', isNameValid);
 
-            // 1. Validasi Nama (Huruf & Spasi)
-            const nameVal = nameInput.value;
-            const isNameValid = /^[a-zA-Z\s]*$/.test(nameVal);
-            
-            if (!isNameValid) {
-                nameError.classList.remove('hidden');
-            } else {
-                nameError.classList.add('hidden');
-            }
+            const isPhoneValid = /^[0-9]*$/.test(phoneInput.value);
+            phoneError.classList.toggle('hidden', isPhoneValid);
 
-            // 2. Validasi HP (Angka Saja)
-            const phoneVal = phoneInput.value;
-            const isPhoneValid = /^[0-9]*$/.test(phoneVal);
-
-            if (!isPhoneValid) {
-                phoneError.classList.remove('hidden');
-            } else {
-                phoneError.classList.add('hidden');
-            }
-
-            // 3. Tombol Submit (Disable jika salah satu error)
-            if (!isNameValid || !isPhoneValid) {
-                submitBtn.disabled = true;
-            } else {
-                submitBtn.disabled = false;
-            }
+            submitBtn.disabled = (!isNameValid || !isPhoneValid);
         }
 
-        // --- Event Listeners ---
-
-        if (nameInput) {
-            nameInput.addEventListener('input', function() {
-                // Limit 50 chars
-                if (this.value.length > 50) this.value = this.value.slice(0, 50);
-                validateInputs();
-            });
-        }
-
-        if (phoneInput) {
-            phoneInput.addEventListener('input', function() {
-                // Limit 13 chars
-                if (this.value.length > 13) this.value = this.value.slice(0, 13);
-                // Real-time clean (opsional, tapi user minta error message, jadi validasi saja)
-                validateInputs();
-            });
-        }
-
-        if (emailInput) {
-            emailInput.addEventListener('input', function() {
-                // Limit 50 chars only
-                if (this.value.length > 50) this.value = this.value.slice(0, 50);
-            });
-        }
+        nameInput?.addEventListener('input', () => {
+            validateInputs();
+        });
+        phoneInput?.addEventListener('input', () => {
+            if (phoneInput.value.length > 13) phoneInput.value = phoneInput.value.slice(0, 13);
+            validateInputs();
+        });
 
     </script>
 

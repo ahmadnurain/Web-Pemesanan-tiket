@@ -44,9 +44,6 @@ class PadAnomalyTable extends BaseWidget
                     ->orWhere(function ($x) {
                         $x->where('payment_status', 'pending')
                             ->where('created_at', '<', now()->subDay());
-                    })
-                    ->orWhere(function ($x) { // reuse multiple scan
-                        $x->where('scan_count', '>', 1);
                     });
             })
             ->latest('created_at');
@@ -68,7 +65,6 @@ class PadAnomalyTable extends BaseWidget
                         'gray'    => 'refunded',
                     ]),
                 Tables\Columns\TextColumn::make('used_at')->label('Dipakai')->since()->placeholder('—'),
-                Tables\Columns\TextColumn::make('scan_count')->label('Scan Cnt'),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('payment_status')->options([

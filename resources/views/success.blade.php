@@ -117,11 +117,11 @@
                         <!-- CTA Buttons -->
                         <div class="flex flex-col gap-3">
                             @php
-                                $downloadUrl = URL::temporarySignedRoute('ticket.download', now()->addHours(24), [
+                                $downloadUrl = URL::signedRoute('ticket.download', [
                                     'transaction' => $customer->uuid,
                                 ]);
 
-                                $resendUrl = URL::temporarySignedRoute('ticket.resend', now()->addMinutes(10), [
+                                $resendUrl = URL::signedRoute('ticket.resend', [
                                     'transaction' => $customer->uuid,
                                 ]);
                             @endphp
@@ -150,31 +150,47 @@
 
 
     <script>
-        const resendBtn = document.getElementById('resendBtn');
-        resendBtn?.addEventListener('click', async () => {
-            const url = resendBtn.dataset.url;
-            resendBtn.disabled = true;
-            const prev = resendBtn.innerHTML;
-            resendBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Mengirim...';
-            try {
-                const res = await fetch(url, {
+        document.addEventListener('DOMContentLoaded', () => {
+            const resendBtn = document.getElementById('resendBtn');
+            const url = resendBtn ? resendBtn.dataset.url : null;
+            
+            // Auto-trigger send email in background for "instant" feel
+            if (url) {
+                // Jangan pakai await agar tidak blocking thread utama
+                fetch(url, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
                         'Accept': 'application/json',
                     },
-                });
-                if (!res.ok) throw new Error(await res.text());
-                resendBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Dikirim!';
-                setTimeout(() => {
+                }).catch(err => console.error('Auto-email trigger failed:', err));
+            }
+
+            // Manual resend handler
+            resendBtn?.addEventListener('click', async () => {
+                resendBtn.disabled = true;
+                const prev = resendBtn.innerHTML;
+                resendBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i>Mengirim...';
+                try {
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                        },
+                    });
+                    if (!res.ok) throw new Error(await res.text());
+                    resendBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Dikirim!';
+                    setTimeout(() => {
+                        resendBtn.innerHTML = prev;
+                        resendBtn.disabled = false;
+                    }, 5000);
+                } catch (e) {
                     resendBtn.innerHTML = prev;
                     resendBtn.disabled = false;
-                }, 1500);
-            } catch (e) {
-                resendBtn.innerHTML = prev;
-                resendBtn.disabled = false;
-                alert('Gagal mengirim ulang e-ticket. Coba beberapa saat lagi.');
-            }
+                    alert('Gagal mengirim ulang e-ticket. Coba beberapa saat lagi.');
+                }
+            });
         });
     </script>
 @endsection

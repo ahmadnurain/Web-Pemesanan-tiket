@@ -54,6 +54,11 @@ class Destinations extends Model
         return $this->hasMany(Video::class);
     }
 
+    public function ticketTypes(): HasMany
+    {
+        return $this->hasMany(DestinationTicketType::class, 'destination_id');
+    }
+
     public function getRouteKeyName(): string
     {
         return 'slug';

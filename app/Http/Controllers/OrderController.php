@@ -30,62 +30,113 @@ class OrderController extends Controller
 
     public function processOrder(Request $request)
     {
-        // 1) Validasi input dari user (tanpa menerima amount dari client)
-        $validated = $request->validate([
+        // 1) Validasi Dasar
+        $rules = [
             'destination_id' => ['required', 'exists:destinations,id'],
             'name'           => ['required', 'string', 'max:255'],
             'email'          => ['required', 'email'],
             'phone_number'   => ['required', 'string', 'max:30'],
-            'total_tickets'  => ['required', 'integer', 'min:1'],
-            'visit_date'     => ['nullable', 'date', 'after_or_equal:today'], // opsional
-            'ticket_type'    => ['nullable', 'in:dewasa,anak'],               // opsional
-        ]);
+            'visit_date'     => ['nullable', 'date', 'after_or_equal:today'],
+        ];
 
-        // 2) Ambil destinasi & pastikan harga valid (integer)
-        $destination = Destinations::findOrFail($validated['destination_id']);
-        $price = (int) $destination->ticket_price;
-        if ($price <= 0) {
-            return back()->withErrors(['amount' => 'Harga tiket tidak valid.'])->withInput();
+        // Cek apakah pakai sistem Multi-Ticket (ticket_types array) atau Single (total_tickets)
+        if ($request->has('ticket_types') && is_array($request->input('ticket_types'))) {
+            $rules['ticket_types'] = ['required', 'array'];
+            $rules['ticket_types.*'] = ['integer', 'min:0'];
+        } else {
+            $rules['total_tickets'] = ['required', 'integer', 'min:1'];
         }
 
-        $qty = (int) $validated['total_tickets'];
+        $validated = $request->validate($rules);
+        $destination = Destinations::with('ticketTypes')->findOrFail($validated['destination_id']);
 
-        // 3) Jika ke depan ada beda harga per tipe, terapkan faktor di sini
-        // $factor = ($validated['ticket_type'] ?? 'dewasa') === 'anak' ? 0.8 : 1;
-        // $amount = (int) round($price * $qty * $factor);
-        $amount = (int) ($price * $qty);
+        // 2) Kalkulasi Harga & Item
+        $amount = 0;
+        $totalQty = 0;
+        $itemsToCreate = [];
 
-        // 4) Buat order_id yang rapi (alnum + dash), unik, <= 50 char
+        // CASE A: Multi-Ticket (Mix)
+        if ($request->has('ticket_types') && is_array($request->input('ticket_types'))) {
+            foreach ($request->input('ticket_types') as $typeId => $qty) {
+                $qty = (int)$qty;
+                if ($qty > 0) {
+                    $type = $destination->ticketTypes->find($typeId);
+                    if ($type) {
+                        $subtotal = $type->price * $qty;
+                        $amount += $subtotal;
+                        $totalQty += $qty;
+                        $itemsToCreate[] = [
+                            'destination_ticket_type_id' => $type->id,
+                            'name' => $type->name,
+                            'price_per_unit' => $type->price,
+                            'quantity' => $qty,
+                            'total_price' => $subtotal
+                        ];
+                    }
+                }
+            }
+            if ($totalQty === 0) {
+                return back()->withErrors(['total_tickets' => 'Mohon pilih minimal satu tiket.'])->withInput();
+            }
+        }
+        // CASE B: Single Ticket (Legacy)
+        else {
+            $price = (int) $destination->ticket_price;
+            if ($price <= 0) {
+                return back()->withErrors(['amount' => 'Harga tiket normal tidak valid.'])->withInput();
+            }
+            $totalQty = (int) $validated['total_tickets'];
+            $amount = (int) ($price * $totalQty);
+            // Item default untuk legacy flow
+            $itemsToCreate[] = [
+                'destination_ticket_type_id' => null,
+                'name' => 'Tiket Masuk Regular',
+                'price_per_unit' => $price,
+                'quantity' => $totalQty,
+                'total_price' => $amount
+            ];
+        }
+
+        // 4) Buat order_id yang rapi
         $orderId = 'TKT-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(8));
 
         // 5) Konfigurasi Midtrans
-        MidtransConfig::$serverKey     = config('midtrans.server_key', env('MIDTRANS_SERVER_KEY'));
-        MidtransConfig::$isProduction  = (bool) config('midtrans.is_production', false);
+        MidtransConfig::$serverKey     = config('midtrans.server_key');
+        MidtransConfig::$isProduction  = (bool) config('midtrans.is_production');
+        // ... (Config check omitted for brevity, ensure handling) ...
+        if (empty(MidtransConfig::$serverKey)) {
+            // Fallback minimal error handling
+            throw new \Exception('Midtrans Server Key belum diset.');
+        }
         MidtransConfig::$isSanitized   = true;
         MidtransConfig::$is3ds         = true;
 
         // 6) Parameter transaksi untuk Snap
+        // Siapkan item_details untuk Midtrans
+        $midtransItems = [];
+        foreach ($itemsToCreate as $item) {
+            $midtransItems[] = [
+                'id'       => $item['destination_ticket_type_id'] ? (string)$item['destination_ticket_type_id'] : 'REGULAR',
+                'price'    => (int)$item['price_per_unit'],
+                'quantity' => (int)$item['quantity'],
+                'name'     => mb_strimwidth($item['name'], 0, 50),
+            ];
+        }
+
         $params = [
             'transaction_details' => [
                 'order_id'      => $orderId,
-                'gross_amount'  => $amount,      // integer (wajib)
+                'gross_amount'  => $amount,
             ],
             'customer_details' => [
                 'first_name' => $validated['name'],
                 'email'      => $validated['email'],
                 'phone'      => $validated['phone_number'],
             ],
-            // item_details opsional tapi berguna (maks 50 chars utk name)
-            'item_details' => [[
-                'id'       => (string) $destination->id,
-                'price'    => $price,
-                'quantity' => $qty,
-                'name'     => mb_strimwidth($destination->name, 0, 50),
-            ]],
+            'item_details' => $midtransItems
         ];
 
-        // 7) Minta Snap Token, tangani error agar user dapat pesan jelas
-        // 7) Minta Snap Token, tangani error agar user dapat pesan jelas
+        // 7) Minta Snap Token
         try {
             $snapToken = MidtransSnap::getSnapToken($params);
         } catch (\Throwable $e) {
@@ -94,24 +145,30 @@ class OrderController extends Controller
         }
 
         // 8) Simpan transaksi + snap_token secara atomik
-        $transaction = DB::transaction(function () use ($validated, $orderId, $amount, $snapToken) {
-            return TicketTransaction::create([
+        $transaction = DB::transaction(function () use ($validated, $orderId, $amount, $totalQty, $snapToken, $itemsToCreate) {
+            $tx = TicketTransaction::create([
                 'destination_id' => $validated['destination_id'],
                 'name'           => $validated['name'],
                 'email'          => $validated['email'],
                 'phone_number'   => $validated['phone_number'],
-                'total_tickets'  => $validated['total_tickets'],
+                'total_tickets'  => $totalQty,
                 'ticket_code'    => 'TKT-' . Str::upper(Str::random(10)),
-                'amount'         => $amount,             // dihitung server-side
+                'amount'         => $amount,
                 'payment_status' => 'pending',
                 'payment_type'   => null,
                 'ticket_status'  => 'unused',
                 'order_id'       => $orderId,
                 'snap_token'     => $snapToken,
-                // kolom baru (opsional) – pastikan sudah ada di migration & $fillable
-                'ticket_type'    => $validated['ticket_type'] ?? 'regular',
+                'ticket_type'    => count($itemsToCreate) > 1 ? 'mixed' : ($validated['ticket_type'] ?? 'regular'),
                 'visit_date'     => $validated['visit_date'] ?? null,
             ]);
+
+            // Save Transaction Items
+            foreach ($itemsToCreate as $item) {
+                $tx->items()->create($item);
+            }
+
+            return $tx;
         });
 
         // 9) Kirim ke view pembayaran
@@ -136,7 +193,7 @@ class OrderController extends Controller
 
         // Kirim email e-ticket di sini agar hanya tereksekusi sekali saat redirect
         // (Idealnya via Webhook, tapi untuk flow ini kita taruh di sini)
-        SendEticketJob::dispatch($transaction->id);
+
 
         return redirect()->route('payment.success');
     }
